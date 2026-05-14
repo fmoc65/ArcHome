@@ -1,2 +1,8 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/R3Integrador.Application/R3Integrador.Application.csproj" />
+    <Project Path="src/R3Integrador.Console/R3Integrador.Console.csproj" />
+    <Project Path="src/R3Integrador.Core/R3Integrador.Core.csproj" />
+    <Project Path="src/R3Integrador.Infrastructure/R3Integrador.Infrastructure.csproj" />
+  </Folder>
 </Solution>
