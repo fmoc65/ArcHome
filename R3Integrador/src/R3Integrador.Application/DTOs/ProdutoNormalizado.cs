@@ -1,4 +1,4 @@
-namespace R3R3Integrador.Application.DTOs;
+namespace R3Integrador.Application.DTOs;
 
 public class ProdutoNormalizado
 {

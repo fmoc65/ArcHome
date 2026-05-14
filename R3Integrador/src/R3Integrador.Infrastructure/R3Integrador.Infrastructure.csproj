@@ -6,17 +6,33 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\R3Integrador.Application\R3Integrador.Application.csproj" />
-    <ProjectReference Include="..\R3Integrador.Core\R3Integrador.Core.csproj" />
-  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="Dapper" Version="2.1.72" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
     <PackageReference Include="Serilog" Version="4.3.1" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+
+
+  <ItemGroup>
+    <Folder Include="Configurations\" />
+    <Folder Include="Excel\" />
+    <Folder Include="Export\" />
+    <Folder Include="Logging\" />
+    <Folder Include="Persistence\" />
+    <Folder Include="Repositories\" />
+  </ItemGroup>
+
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\R3Integrador.Application\R3Integrador.Application.csproj" />
+    <ProjectReference Include="..\R3Integrador.Core\R3Integrador.Core.csproj" />
   </ItemGroup>
 
 </Project>

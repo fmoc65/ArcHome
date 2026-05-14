@@ -6,16 +6,22 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\R3Integrador.Core\R3Integrador.Core.csproj" />
-  </ItemGroup>
+  
 
   <ItemGroup>
     <Folder Include="DTOs\" />
     <Folder Include="Interfaces\" />
+    <Folder Include="Mappers\" />
     <Folder Include="Normalizers\" />
     <Folder Include="Services\" />
+    <Folder Include="UseCases\" />
     <Folder Include="Validations\" />
+  </ItemGroup>
+
+  
+
+  <ItemGroup>
+    <ProjectReference Include="..\R3Integrador.Core\R3Integrador.Core.csproj" />
   </ItemGroup>
 
 </Project>
