@@ -31,14 +31,24 @@ public class ExcelReaderService : IExcelReader
         for (int row = 1; row <= ultimaLinha; row++)
         {
             var referencia =
-                worksheet.Cell(row, 2).GetString();
+                worksheet.Cell(row, 2)
+                    .GetString()
+                    .Trim();
 
+            // ignora linhas vazias
             if (string.IsNullOrWhiteSpace(referencia))
                 continue;
 
-            var formato =
-                worksheet.Cell(row, 1).GetString();
+            // ignora cabeçalhos/textos
+            if (!referencia.All(char.IsDigit))
+                continue;
 
+            var formato =
+                worksheet.Cell(row, 1)
+                    .GetString()
+                    .Trim();
+
+            // mantém valor do merge
             if (!string.IsNullOrWhiteSpace(formato))
             {
                 formatoAtual = formato;
@@ -52,31 +62,50 @@ public class ExcelReaderService : IExcelReader
 
                 Referencia = referencia,
 
-                Linha = worksheet.Cell(row, 3).GetString(),
+                Linha =
+                    worksheet.Cell(row, 3)
+                        .GetString()
+                        .Trim(),
 
-                Colecao = worksheet.Cell(row, 4).GetString(),
+                Colecao =
+                    worksheet.Cell(row, 4)
+                        .GetString()
+                        .Trim(),
 
-                Cor = worksheet.Cell(row, 5).GetString(),
+                Cor =
+                    worksheet.Cell(row, 5)
+                        .GetString()
+                        .Trim(),
 
-                Superficie = worksheet.Cell(row, 6).GetString(),
+                Superficie =
+                    worksheet.Cell(row, 6)
+                        .GetString()
+                        .Trim(),
 
                 Faces = ParseInt(
-                    worksheet.Cell(row, 7).GetString()),
+                    worksheet.Cell(row, 7)
+                        .GetString()),
 
                 VariacaoTonalidade =
-                    worksheet.Cell(row, 8).GetString(),
+                    worksheet.Cell(row, 8)
+                        .GetString()
+                        .Trim(),
 
                 M2Caixa = ParseDecimal(
-                    worksheet.Cell(row, 11).GetString()),
+                    worksheet.Cell(row, 11)
+                        .GetString()),
 
                 Espessura = ParseDecimal(
-                    worksheet.Cell(row, 17).GetString()),
+                    worksheet.Cell(row, 17)
+                        .GetString()),
 
                 PrecoTabela = ParseDecimal(
-                    worksheet.Cell(row, 18).GetString()),
+                    worksheet.Cell(row, 18)
+                        .GetString()),
 
                 PrecoDesconto = ParseDecimal(
-                    worksheet.Cell(row, 19).GetString())
+                    worksheet.Cell(row, 19)
+                        .GetString())
             };
 
             produtos.Add(produto);

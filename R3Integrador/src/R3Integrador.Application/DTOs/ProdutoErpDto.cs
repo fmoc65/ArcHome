@@ -15,4 +15,5 @@ public class ProdutoErpDto
     public string Cfop { get; set; } = string.Empty;
     public decimal PesoBruto { get; set; }
     public decimal Espessura { get; set; }
+    public decimal PrecoFracionado { get; set; }
 }
