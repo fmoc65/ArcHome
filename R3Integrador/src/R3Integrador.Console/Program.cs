@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using R3Integrador.Application.Interfaces;
 using R3Integrador.Application.Services;
+using R3Integrador.Infrastructure.Export;
 using R3Integrador.Infrastructure.Repositories;
 using Serilog;
 
@@ -19,6 +20,8 @@ Log.Information("Aplicação iniciada");
 builder.Services.AddSingleton<IExcelReader, ExcelReaderService>();
 
 builder.Services.AddSingleton<ImportacaoService>();
+
+builder.Services.AddSingleton<IExcelExporter, ExcelExportService>();
 
 var app = builder.Build();
 
