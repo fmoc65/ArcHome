@@ -4,6 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    
+    <RootNamespace>R3Integrador.Core</RootNamespace>
+    <AssemblyName>R3Integrador.Core</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

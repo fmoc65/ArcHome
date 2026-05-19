@@ -13,6 +13,7 @@ public class ProdutoNormalizado
     public string VariacaoTonalidade { get; set; } = string.Empty;
     public decimal PrecoTabela { get; set; }
     public decimal PrecoDesconto { get; set; }
+    public decimal PrecoVenda { get; set; }
     public decimal Espessura { get; set; }
     public decimal M2Caixa { get; set; }
 }
