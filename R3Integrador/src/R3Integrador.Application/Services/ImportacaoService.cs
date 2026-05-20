@@ -43,7 +43,10 @@ public class ImportacaoService
         var pastaSaida = @"C:\Projetos\ArcHome\R3Integrador\Saida";
         if (!Directory.Exists(pastaSaida)) Directory.CreateDirectory(pastaSaida);
 
-        var arquivoSaida = Path.Combine(pastaSaida, $"{tabela}_ERP_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+        //var arquivoSaida = Path.Combine(pastaSaida, $"{tabela}_ERP_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+        // Altere temporariamente no ImportacaoService.cs para testar:
+        var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+        var arquivoSaida = Path.Combine(desktopPath, $"DELCREDERE_ERP_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
 
         // Agora o ExportarAsync recebe a lista convertida corretamente!
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);                
@@ -52,23 +55,37 @@ public class ImportacaoService
     }
 
     // 2. Processamento Específico para a Planilha Delcredere (Opção 4 do Menu )
-    public async Task ProcessarDelcredereAsync(string caminhoArquivo)
+   public async Task ProcessarDelcredereAsync(string caminhoArquivo)
+{
+    _logger.LogInformation("Iniciando processamento da tabela Delcredere Varejo...");
+
+    // 1. Lê a planilha na Aba correspondente usando o seu ExcelReaderService
+    var produtosBrutos = await _excelReader.LerAsync(caminhoArquivo, "COM DEL CREDERE"); 
+
+    if (produtosBrutos == null || !produtosBrutos.Any())
     {
-        _logger.LogInformation("Iniciando processamento da tabela Delcredere...");
-        
-        // Exemplo: Reaproveitando a leitura padrão por enquanto (aba 1) ou crie um método específico no IExcelReader depois
-        var produtosBrutos = await _excelReader.LerAsync(caminhoArquivo, "COM DEL CREDERE"); 
-
-        if (produtosBrutos == null || !produtosBrutos.Any()) return;
-
-        // Mapeia e já aplica uma regra de comissão, se necessário
-        var produtosErp = produtosBrutos.Select(p => ProdutoErpMapper.Map(p)).ToList();
-
-        var arquivoSaida = $@"C:\Projetos\ArcHome\R3Integrador\Saida\DELCREDERE_ERP_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
-        await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
-
-        _logger.LogInformation("Exportação Delcredere concluída.");
+        _logger.LogWarning("Nenhum produto válido encontrado na aba 'COM DEL CREDERE'.");
+        return;
     }
+
+    // Marca a origem no DTO Normalizado para o Mapper saber tratar as regras de grupo
+    foreach(var p in produtosBrutos)
+    {
+        p.TipoTabela = "DELCREDERE_VAREJO";
+    }
+
+    // 2. Transforma a lista através do Mapeador inteligente
+    var produtosErp = produtosBrutos.Select(p => ProdutoErpMapper.Map(p)).ToList();
+
+    // 3. Define a pasta de saída padrão de forma dinâmica
+    string pastaSaida = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Saida");
+    string arquivoSaida = Path.Combine(pastaSaida, $"IMPORTACAO_ERP_DELCREDERE_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+
+    // 4. Exporta usando o novo padrão de 60 colunas do ERP
+    await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
+
+    _logger.LogInformation("Processamento e exportação Delcredere concluídos com sucesso.");
+}
 
     // 3. Processamento Específico para a Planilha Villa Art Boutique (Opção 5 do Menu)
     public async Task ProcessarVillaArtAsync(string caminhoArquivo)
