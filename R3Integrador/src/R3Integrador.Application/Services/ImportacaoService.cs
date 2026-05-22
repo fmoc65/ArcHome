@@ -103,4 +103,30 @@ public class ImportacaoService
 
         _logger.LogInformation("Exportação Villa Art concluída.");
     }
+
+    // Processamento específico para a Planilha de Vinílicos (Opção 2 do Menu)
+public async Task ProcessarVinilicoAsync(string caminhoArquivo)
+{
+    _logger.LogInformation("Iniciando processamento da tabela de Vinílicos...");
+
+    // 1. Lê os dados da aba "VINILICO" da planilha do fornecedor
+    var produtosBrutos = await _excelReader.LerAsync(caminhoArquivo, "VINILICO");
+
+    if (produtosBrutos == null || !produtosBrutos.Any())
+    {
+        _logger.LogWarning("Nenhum produto válido encontrado na aba VINILICO.");
+        return;
+    }
+
+    // 2. Mapeia os dados normalizados para o DTO de 60 colunas do ERP usando o ProdutoErpMapper
+    var produtosErp = produtosBrutos.Select(p => ProdutoErpMapper.Map(p)).ToList();
+
+    // 3. Define o caminho final de saída para a pasta unificada
+    var arquivoSaida = $@"C:\Projetos\ArcHome\R3Integrador\Saida\VINILICO_ERP_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+    
+    // 4. Exporta usando o ExcelExportService que já possui as 60 colunas estruturadas
+    await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
+
+    _logger.LogInformation("Processamento e exportação de Vinílicos concluídos com sucesso.");
+}
 }

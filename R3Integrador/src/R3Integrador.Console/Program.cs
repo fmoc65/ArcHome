@@ -63,7 +63,7 @@ while (executando)
     switch (opcao)
     {
         case "1": await ExecutarAcaoAsync(() => importacaoService.ProcessarPadraoAsync(ObterCaminho(), "VAREJO")); break;
-        case "2": await ExecutarAcaoAsync(() => importacaoService.ProcessarPadraoAsync(ObterCaminho(), "VINILICO")); break;
+        case "2": await ExecutarAcaoAsync(() => importacaoService.ProcessarVinilicoAsync(ObterCaminho())); break;
         case "3": await ExecutarAcaoAsync(() => importacaoService.ProcessarPadraoAsync(ObterCaminho(), "LASTRA")); break;
         case "4": await ExecutarAcaoAsync(() => importacaoService.ProcessarDelcredereAsync(ObterCaminho())); break;
         case "5": await ExecutarAcaoAsync(() => importacaoService.ProcessarVillaArtAsync(ObterCaminho())); break;
