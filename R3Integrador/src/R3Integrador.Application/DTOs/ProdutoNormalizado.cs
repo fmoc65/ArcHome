@@ -9,6 +9,10 @@ public class ProdutoNormalizado
     public string Colecao { get; set; } = string.Empty;
     public string Cor { get; set; } = string.Empty;
     public string Superficie { get; set; } = string.Empty;
+    public string Grupo { get; set; } = string.Empty;
+    public string SubGrupo { get; set; } = string.Empty;
+    public string Marca { get; set; } = string.Empty;
+    public string Modelo { get; set; } = string.Empty;
     public string TabelaPreco { get; set; } = string.Empty;
     public int Faces { get; set; }
     public string VariacaoTonalidade { get; set; } = string.Empty;

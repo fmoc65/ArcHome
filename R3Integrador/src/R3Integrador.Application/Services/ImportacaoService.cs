@@ -175,10 +175,14 @@ public class ImportacaoService
         {
             var produto = produtos[i];
             _logger.LogDebug(
-                "Normalizado {Indice}/{Total}: Ref={Referencia}; Formato={Formato}; Linha={Linha}; Colecao={Colecao}; Superficie={Superficie}; Cor={Cor}; TabelaPreco={TabelaPreco}; PrecoTabela={PrecoTabela}; PrecoDesconto={PrecoDesconto}; PrecoVenda={PrecoVenda}; M2Caixa={M2Caixa}; Espessura={Espessura}",
+                "Normalizado {Indice}/{Total}: Ref={Referencia}; Grupo={Grupo}; SubGrupo={SubGrupo}; Marca={Marca}; Modelo={Modelo}; Formato={Formato}; Linha={Linha}; Colecao={Colecao}; Superficie={Superficie}; Cor={Cor}; TabelaPreco={TabelaPreco}; PrecoTabela={PrecoTabela}; PrecoDesconto={PrecoDesconto}; PrecoVenda={PrecoVenda}; M2Caixa={M2Caixa}; Espessura={Espessura}",
                 i + 1,
                 produtos.Count,
                 produto.Referencia,
+                produto.Grupo,
+                produto.SubGrupo,
+                produto.Marca,
+                produto.Modelo,
                 produto.Formato,
                 produto.Linha,
                 produto.Colecao,

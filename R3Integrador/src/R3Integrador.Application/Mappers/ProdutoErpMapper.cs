@@ -7,8 +7,6 @@ public static class ProdutoErpMapper
 {
     public static ProdutoErpDto Map(ProdutoNormalizado produto)
     {
-        var grupo = GerarGrupo(produto);
-        var subGrupo = GerarSubGrupo(produto);
         var descricaoGerada = GerarDescricao(produto);
 
         return new ProdutoErpDto
@@ -17,12 +15,12 @@ public static class ProdutoErpMapper
             CodigoFabrica = produto.Referencia,
             CodigoBarras = string.Empty,
             DescricaoCompleta = descricaoGerada,
-            DescricaoComercial = GerarDescricaoComercial(produto, grupo),
-            Grupo = grupo,
-            SubGrupo = subGrupo,
-            Marca = "ARC HOME",
+            DescricaoComercial = GerarDescricaoComercial(produto),
+            Grupo = produto.Grupo,
+            SubGrupo = produto.SubGrupo,
+            Marca = produto.Marca,
             Linha = produto.Linha,
-            Modelo = GerarModelo(produto),
+            Modelo = produto.Modelo,
             Voltagem = "N/A",
             Cor = produto.Cor,
             Ncm = "69072100",
@@ -70,34 +68,15 @@ public static class ProdutoErpMapper
         };
     }
 
-    private static string GerarGrupo(ProdutoNormalizado produto)
-    {
-        return NormalizarEspacos(produto.TipoTabela).ToUpper();
-    }
-
-    private static string GerarSubGrupo(ProdutoNormalizado produto)
-    {
-        return NormalizarEspacos($"{produto.Colecao} {produto.Superficie}").ToUpper();
-    }
-
-    private static string GerarModelo(ProdutoNormalizado produto)
-    {
-        return NormalizarEspacos($"{produto.Colecao} {produto.TabelaPreco}").ToUpper();
-    }
-
     private static string GerarDescricao(ProdutoNormalizado produto)
     {
-        var tipoProduto = produto.TipoTabela.Contains("VINILICO", StringComparison.OrdinalIgnoreCase)
-            ? "VINILICO"
-            : "PORCELANATO";
-
-        var descricao = $"{tipoProduto} {produto.Linha} {produto.Superficie} {produto.Cor} {NormalizarMedida(produto.Formato)}";
+        var descricao = $"{produto.Grupo} {produto.Linha} {produto.SubGrupo} {produto.Cor} {produto.Modelo}";
         return NormalizarEspacos(descricao).ToUpper();
     }
 
-    private static string GerarDescricaoComercial(ProdutoNormalizado produto, string grupo)
+    private static string GerarDescricaoComercial(ProdutoNormalizado produto)
     {
-        var descricao = $"{grupo} {NormalizarMedida(produto.Formato)} {produto.Cor}";
+        var descricao = $"{produto.Grupo} {produto.Modelo} {produto.Cor}";
         return NormalizarEspacos(descricao).ToUpper();
     }
 
@@ -110,11 +89,6 @@ public static class ProdutoErpMapper
 
         var desconto = (produto.PrecoTabela - produto.PrecoDesconto) / produto.PrecoTabela * 100;
         return Math.Round(desconto, 2);
-    }
-
-    private static string NormalizarMedida(string formato)
-    {
-        return formato.Replace(" ", string.Empty).ToUpper();
     }
 
     private static string NormalizarEspacos(string valor)
