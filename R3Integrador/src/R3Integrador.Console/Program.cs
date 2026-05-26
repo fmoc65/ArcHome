@@ -24,6 +24,9 @@ builder.Logging.ClearProviders();
 builder.Logging.AddSerilog();
 
 builder.Services.AddSingleton<IExcelReader, ExcelReaderService>();
+builder.Services.AddSingleton<IVinilicoReader, VinilicoReaderService>();
+builder.Services.AddSingleton<IDelcredereReader, DelcredereReaderService>();
+builder.Services.AddSingleton<IVillaArtReader, VillaArtReaderService>();
 builder.Services.AddSingleton<ImportacaoService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExportService>();
 

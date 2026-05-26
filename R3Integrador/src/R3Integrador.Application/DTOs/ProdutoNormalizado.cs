@@ -9,6 +9,7 @@ public class ProdutoNormalizado
     public string Colecao { get; set; } = string.Empty;
     public string Cor { get; set; } = string.Empty;
     public string Superficie { get; set; } = string.Empty;
+    public string TabelaPreco { get; set; } = string.Empty;
     public int Faces { get; set; }
     public string VariacaoTonalidade { get; set; } = string.Empty;
     public decimal PrecoTabela { get; set; }

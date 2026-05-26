@@ -1,5 +1,5 @@
 using R3Integrador.Application.DTOs;
-using R3Integrador.Core.Enums;
+using System.Text.RegularExpressions;
 
 namespace R3Integrador.Application.Mappers;
 
@@ -7,29 +7,22 @@ public static class ProdutoErpMapper
 {
     public static ProdutoErpDto Map(ProdutoNormalizado produto)
     {
-        var grupo = IdentificarGrupo(produto.TipoTabela);
-        var subGrupo = IdentificarSubGrupo(produto.Colecao, grupo);
-
-        string apenasNumeros = new string(produto.Referencia.Where(char.IsDigit).ToArray());
-        string sufixoCodigo = apenasNumeros.Length >= 3 
-            ? apenasNumeros[^3..] 
-            : apenasNumeros.PadLeft(3, '0');
-        
-        string codigoInternoMascarado = $"{(int)grupo}.{(int)subGrupo}.{sufixoCodigo}";
-        string descricaoGerada = $"{produto.Linha} {produto.Colecao} {produto.Superficie} {produto.Cor} {produto.Formato}".Trim().ToUpper();
+        var grupo = GerarGrupo(produto);
+        var subGrupo = GerarSubGrupo(produto);
+        var descricaoGerada = GerarDescricao(produto);
 
         return new ProdutoErpDto
         {
-            CodigoInterno = codigoInternoMascarado,
+            CodigoInterno = string.Empty,
             CodigoFabrica = produto.Referencia,
             CodigoBarras = string.Empty,
             DescricaoCompleta = descricaoGerada,
-            DescricaoComercial = $"{produto.Linha} {produto.Colecao}".ToUpper(),
-            Grupo = ((int)grupo).ToString(),
-            SubGrupo = ((int)subGrupo).ToString(),
+            DescricaoComercial = GerarDescricaoComercial(produto, grupo),
+            Grupo = grupo,
+            SubGrupo = subGrupo,
             Marca = "ARC HOME",
             Linha = produto.Linha,
-            Modelo = produto.Colecao,
+            Modelo = GerarModelo(produto),
             Voltagem = "N/A",
             Cor = produto.Cor,
             Ncm = "69072100",
@@ -38,7 +31,7 @@ public static class ProdutoErpMapper
             // Mapeamento correto dos preços nas colunas oficiais do ERP
             PrecoVenda = produto.PrecoVenda, 
             PrecoFabrica = produto.PrecoTabela,
-            DescontoPercentual = 0,
+            DescontoPercentual = CalcularDescontoPercentual(produto),
             IpiPercentual = 0,
             AliqIcmsOrigem = 18.00m,
             AliqIcmsInterna = 18.00m,
@@ -77,28 +70,56 @@ public static class ProdutoErpMapper
         };
     }
 
-    private static Grupo IdentificarGrupo(string tipoTabela)
+    private static string GerarGrupo(ProdutoNormalizado produto)
     {
-        if (string.IsNullOrWhiteSpace(tipoTabela)) return Grupo.NaoDefinido;
-        string t = tipoTabela.ToUpper();
-        if (t.Contains("VAREJO") || t.Contains("DELCREDERE")) return Grupo.Revestimento;
-        if (t.Contains("VINILICO")) return Grupo.Vinilico;
-        if (t.Contains("LASTRA")) return Grupo.Lastra;
-        if (t.Contains("BOUTIQUE") || t.Contains("VILLA")) return Grupo.Boutique;
-        
-        return Grupo.NaoDefinido;
+        return NormalizarEspacos(produto.TipoTabela).ToUpper();
     }
 
-    private static SubGrupo IdentificarSubGrupo(string colecao, Grupo grupo)
+    private static string GerarSubGrupo(ProdutoNormalizado produto)
     {
-        if (string.IsNullOrWhiteSpace(colecao)) return SubGrupo.Padrao;
-        if (grupo == Grupo.Vinilico)
-        {
-            if (colecao.Contains("SPC", StringComparison.OrdinalIgnoreCase)) return SubGrupo.Spc;
-            if (colecao.Contains("LVT", StringComparison.OrdinalIgnoreCase)) return SubGrupo.Lvt;
-        }
-        if (colecao.Contains("PORCELANATO", StringComparison.OrdinalIgnoreCase)) return SubGrupo.Porcelanato;
-        
-        return SubGrupo.Padrao;
+        return NormalizarEspacos($"{produto.Colecao} {produto.Superficie}").ToUpper();
     }
+
+    private static string GerarModelo(ProdutoNormalizado produto)
+    {
+        return NormalizarEspacos($"{produto.Colecao} {produto.TabelaPreco}").ToUpper();
+    }
+
+    private static string GerarDescricao(ProdutoNormalizado produto)
+    {
+        var tipoProduto = produto.TipoTabela.Contains("VINILICO", StringComparison.OrdinalIgnoreCase)
+            ? "VINILICO"
+            : "PORCELANATO";
+
+        var descricao = $"{tipoProduto} {produto.Linha} {produto.Superficie} {produto.Cor} {NormalizarMedida(produto.Formato)}";
+        return NormalizarEspacos(descricao).ToUpper();
+    }
+
+    private static string GerarDescricaoComercial(ProdutoNormalizado produto, string grupo)
+    {
+        var descricao = $"{grupo} {NormalizarMedida(produto.Formato)} {produto.Cor}";
+        return NormalizarEspacos(descricao).ToUpper();
+    }
+
+    private static decimal CalcularDescontoPercentual(ProdutoNormalizado produto)
+    {
+        if (produto.PrecoTabela <= 0 || produto.PrecoDesconto <= 0)
+        {
+            return 0;
+        }
+
+        var desconto = (produto.PrecoTabela - produto.PrecoDesconto) / produto.PrecoTabela * 100;
+        return Math.Round(desconto, 2);
+    }
+
+    private static string NormalizarMedida(string formato)
+    {
+        return formato.Replace(" ", string.Empty).ToUpper();
+    }
+
+    private static string NormalizarEspacos(string valor)
+    {
+        return Regex.Replace(valor.Trim(), @"\s+", " ");
+    }
+
 }

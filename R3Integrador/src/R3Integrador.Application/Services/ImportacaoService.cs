@@ -6,16 +6,27 @@ namespace R3Integrador.Application.Services;
 
 public class ImportacaoService
 {
+    private const string PastaSaidaPadrao = @"C:\Projetos\ArcHome\R3Integrador\Saida";
+
     private readonly IExcelReader _excelReader;
+    private readonly IVinilicoReader _vinilicoReader;
+    private readonly IDelcredereReader _delcredereReader;
+    private readonly IVillaArtReader _villaArtReader;
     private readonly IExcelExporter _excelExporter;
     private readonly ILogger<ImportacaoService> _logger;
 
     public ImportacaoService(
         IExcelReader excelReader,
+        IVinilicoReader vinilicoReader,
+        IDelcredereReader delcredereReader,
+        IVillaArtReader villaArtReader,
         IExcelExporter excelExporter,
         ILogger<ImportacaoService> logger)
     {
         _excelReader = excelReader;
+        _vinilicoReader = vinilicoReader;
+        _delcredereReader = delcredereReader;
+        _villaArtReader = villaArtReader;
         _excelExporter = excelExporter;
         _logger = logger;
     }
@@ -40,13 +51,7 @@ public class ImportacaoService
         // ====================================================================
         var produtosErp = produtosBrutos.Select(p => ProdutoErpMapper.Map(p)).ToList();
 
-        var pastaSaida = @"C:\Projetos\ArcHome\R3Integrador\Saida";
-        if (!Directory.Exists(pastaSaida)) Directory.CreateDirectory(pastaSaida);
-
-        //var arquivoSaida = Path.Combine(pastaSaida, $"{tabela}_ERP_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
-        // Altere temporariamente no ImportacaoService.cs para testar:
-        var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-        var arquivoSaida = Path.Combine(desktopPath, $"DELCREDERE_ERP_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+        var arquivoSaida = CriarCaminhoSaida($"{tabela}_ERP_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
         // Agora o ExportarAsync recebe a lista convertida corretamente!
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);                
@@ -60,7 +65,7 @@ public class ImportacaoService
     _logger.LogInformation("Iniciando processamento da tabela Delcredere Varejo...");
 
     // 1. Lê a planilha na Aba correspondente usando o seu ExcelReaderService
-    var produtosBrutos = await _excelReader.LerAsync(caminhoArquivo, "COM DEL CREDERE"); 
+    var produtosBrutos = await _delcredereReader.LerAsync(caminhoArquivo); 
 
     if (produtosBrutos == null || !produtosBrutos.Any())
     {
@@ -68,18 +73,11 @@ public class ImportacaoService
         return;
     }
 
-    // Marca a origem no DTO Normalizado para o Mapper saber tratar as regras de grupo
-    foreach(var p in produtosBrutos)
-    {
-        p.TipoTabela = "DELCREDERE_VAREJO";
-    }
-
     // 2. Transforma a lista através do Mapeador inteligente
     var produtosErp = produtosBrutos.Select(p => ProdutoErpMapper.Map(p)).ToList();
 
     // 3. Define a pasta de saída padrão de forma dinâmica
-    string pastaSaida = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Saida");
-    string arquivoSaida = Path.Combine(pastaSaida, $"IMPORTACAO_ERP_DELCREDERE_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+    string arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_DELCREDERE_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
     // 4. Exporta usando o novo padrão de 60 colunas do ERP
     await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
@@ -92,13 +90,13 @@ public class ImportacaoService
     {
         _logger.LogInformation("Iniciando processamento da tabela Villa Art Boutique...");
         
-        var produtosBrutos = await _excelReader.LerAsync(caminhoArquivo, "VILLA ART - BOUTIQUE");
+        var produtosBrutos = await _villaArtReader.LerAsync(caminhoArquivo);
 
         if (produtosBrutos == null || !produtosBrutos.Any()) return;
 
         var produtosErp = produtosBrutos.Select(p => ProdutoErpMapper.Map(p)).ToList();
 
-        var arquivoSaida = $@"C:\Projetos\ArcHome\R3Integrador\Saida\VILLA_ART_ERP_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+        var arquivoSaida = CriarCaminhoSaida($"VILLA_ART_ERP_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
 
         _logger.LogInformation("Exportação Villa Art concluída.");
@@ -110,7 +108,7 @@ public async Task ProcessarVinilicoAsync(string caminhoArquivo)
     _logger.LogInformation("Iniciando processamento da tabela de Vinílicos...");
 
     // 1. Lê os dados da aba "VINILICO" da planilha do fornecedor
-    var produtosBrutos = await _excelReader.LerAsync(caminhoArquivo, "VINILICO");
+    var produtosBrutos = await _vinilicoReader.LerAsync(caminhoArquivo);
 
     if (produtosBrutos == null || !produtosBrutos.Any())
     {
@@ -122,11 +120,17 @@ public async Task ProcessarVinilicoAsync(string caminhoArquivo)
     var produtosErp = produtosBrutos.Select(p => ProdutoErpMapper.Map(p)).ToList();
 
     // 3. Define o caminho final de saída para a pasta unificada
-    var arquivoSaida = $@"C:\Projetos\ArcHome\R3Integrador\Saida\VINILICO_ERP_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+    var arquivoSaida = CriarCaminhoSaida($"VINILICO_ERP_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
     
     // 4. Exporta usando o ExcelExportService que já possui as 60 colunas estruturadas
     await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
 
     _logger.LogInformation("Processamento e exportação de Vinílicos concluídos com sucesso.");
+}
+
+private static string CriarCaminhoSaida(string nomeArquivo)
+{
+    Directory.CreateDirectory(PastaSaidaPadrao);
+    return Path.Combine(PastaSaidaPadrao, nomeArquivo);
 }
 }
