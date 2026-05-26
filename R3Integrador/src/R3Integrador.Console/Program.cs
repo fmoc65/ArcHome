@@ -9,14 +9,8 @@ using Serilog;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// Configura o núcleo do Serilog para Console e Arquivo
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug() // Define nível Debug para pegar todos os detalhes do processo
-    .WriteTo.Console()
-    .WriteTo.File(
-        @"C:\log\log-.txt",
-        rollingInterval: RollingInterval.Day,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
 
 // VÍNCULO DO LOG: Limpa os provedores padrão e injeta o Serilog no Container do Framework
@@ -27,6 +21,7 @@ builder.Services.AddSingleton<IExcelReader, ExcelReaderService>();
 builder.Services.AddSingleton<IVinilicoReader, VinilicoReaderService>();
 builder.Services.AddSingleton<IDelcredereReader, DelcredereReaderService>();
 builder.Services.AddSingleton<IVillaArtReader, VillaArtReaderService>();
+builder.Services.AddSingleton<ILastraReader, LastraReaderService>();
 builder.Services.AddSingleton<ImportacaoService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExportService>();
 
@@ -67,7 +62,7 @@ while (executando)
     {
         case "1": await ExecutarAcaoAsync(() => importacaoService.ProcessarPadraoAsync(ObterCaminho(), "VAREJO")); break;
         case "2": await ExecutarAcaoAsync(() => importacaoService.ProcessarVinilicoAsync(ObterCaminho())); break;
-        case "3": await ExecutarAcaoAsync(() => importacaoService.ProcessarPadraoAsync(ObterCaminho(), "LASTRA")); break;
+        case "3": await ExecutarAcaoAsync(() => importacaoService.ProcessarLastraAsync(ObterCaminho())); break;
         case "4": await ExecutarAcaoAsync(() => importacaoService.ProcessarDelcredereAsync(ObterCaminho())); break;
         case "5": await ExecutarAcaoAsync(() => importacaoService.ProcessarVillaArtAsync(ObterCaminho())); break;
         case "0": executando = false; break;
