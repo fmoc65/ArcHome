@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using R3Integrador.Application.DTOs;
 using R3Integrador.Application.Interfaces;
 
@@ -18,7 +18,6 @@ public class ExcelReaderService : IExcelReader
             return produtos;
         }
 
-        // Variáveis de estado para manter o valor das células mescladas (Merge)
         string formatoAtual = string.Empty;
         string linhaModeloAtual = string.Empty;
 
@@ -28,73 +27,18 @@ public class ExcelReaderService : IExcelReader
         {
             var referencia = worksheet.Cell(row, 2).GetString().Trim();
 
-            // 1. Ignora linhas totalmente vazias
-            if (string.IsNullOrWhiteSpace(referencia))
+            if (DeveIgnorarLinha(referencia, tabela))
                 continue;
 
-            // 2. Filtro inteligente de cabeçalhos: ignora títulos de seções das planilhas
-            if (referencia.Equals("Ref.", StringComparison.OrdinalIgnoreCase) || 
-                referencia.Equals("VINÍLICOS", StringComparison.OrdinalIgnoreCase) ||
-                referencia.Equals("LASTRAS", StringComparison.OrdinalIgnoreCase) ||
-                referencia.Equals("Formato", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            // 3. Validação de segurança para códigos de fábrica (Para Varejo/Lastra exige números, para Vinílico aceita Letras)
-            if (!tabela.Equals("VINILICO", StringComparison.OrdinalIgnoreCase))
-            {
-                if (!referencia.All(char.IsDigit)) 
-                    continue;
-            }
-
-            // Captura os valores da linha atual do Excel
             var formato = worksheet.Cell(row, 1).GetString().Trim();
             var linhaModelo = worksheet.Cell(row, 3).GetString().Trim();
+            var superficie = NormalizarSuperficie(worksheet.Cell(row, 6).GetString(), tabela);
 
-            // Lógica do Merge para a Coluna 1 (Formato)
-            if (!string.IsNullOrWhiteSpace(formato))
-            {
-                formatoAtual = formato;
-            }
+            formatoAtual = ManterValorMesclado(formato, formatoAtual);
+            linhaModeloAtual = ManterValorMesclado(linhaModelo, linhaModeloAtual);
 
-            // Lógica do Merge para a Coluna 3 (Linha/Modelo)
-            if (!string.IsNullOrWhiteSpace(linhaModelo))
-            {
-                linhaModeloAtual = linhaModelo;
-            }
-
-            // Monta o objeto normalizado utilizando os valores propagados do Merge se necessário
-            var produto = new ProdutoNormalizado
-            {
-                TipoTabela = tabela,
-                Formato = formatoAtual,
-                Referencia = referencia,
-                Linha = linhaModeloAtual, // Aqui garante que herda a "Linha de cima" se estiver mesclado
-                Colecao = worksheet.Cell(row, 4).GetString().Trim(),
-                Cor = worksheet.Cell(row, 5).GetString().Trim(),
-                Superficie = worksheet.Cell(row, 6).GetString().Trim(),
-                Grupo = "PORCELANATO",
-                SubGrupo = worksheet.Cell(row, 6).GetString().Trim().ToUpper(),
-                Marca = "ARC HOME",
-                Modelo = formatoAtual.Replace(" ", string.Empty).ToUpper(),
-                Faces = ParseInt(worksheet.Cell(row, 7).GetString()),
-                VariacaoTonalidade = worksheet.Cell(row, 8).GetString().Trim(),
-                M2Caixa = ParseDecimal(worksheet.Cell(row, 11).GetString()),
-                Espessura = ParseDecimal(worksheet.Cell(row, 17).GetString())
-            };
-
-            // 4. Mapeamento Dinâmico de Preços baseado na Aba
-            if (tabela.Equals("VINILICO", StringComparison.OrdinalIgnoreCase))
-            {
-                produto.PrecoTabela = ParseDecimal(worksheet.Cell(row, 18).GetString());
-                produto.PrecoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetString());
-                produto.PrecoVenda = produto.PrecoDesconto; // No Vinílico, a última coluna preenchida é a 19
-            }
-            else
-            {
-                produto.PrecoTabela = ParseDecimal(worksheet.Cell(row, 18).GetString());
-                produto.PrecoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetString());
-                produto.PrecoVenda = ParseDecimal(worksheet.Cell(row, 20).GetString()); // Varejo/Lastra buscam o Fracionado na col 20
-            }
+            var produto = CriarProduto(worksheet, row, tabela, referencia, formatoAtual, linhaModeloAtual, superficie);
+            PreencherPrecos(produto, worksheet, row, tabela);
 
             produtos.Add(produto);
         }
@@ -117,5 +61,88 @@ public class ExcelReaderService : IExcelReader
     {
         int.TryParse(valor, out var resultado);
         return resultado;
+    }
+
+    private static bool DeveIgnorarLinha(string referencia, string tabela)
+    {
+        if (string.IsNullOrWhiteSpace(referencia))
+            return true;
+
+        if (EhCabecalho(referencia))
+            return true;
+
+        return !tabela.Equals("VINILICO", StringComparison.OrdinalIgnoreCase) &&
+            !referencia.All(char.IsDigit);
+    }
+
+    private static bool EhCabecalho(string referencia)
+    {
+        return referencia.Equals("Ref.", StringComparison.OrdinalIgnoreCase) ||
+            referencia.Equals("VINÍLICOS", StringComparison.OrdinalIgnoreCase) ||
+            referencia.Equals("VINILICOS", StringComparison.OrdinalIgnoreCase) ||
+            referencia.Equals("LASTRAS", StringComparison.OrdinalIgnoreCase) ||
+            referencia.Equals("Formato", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ManterValorMesclado(string valorAtual, string valorAnterior)
+    {
+        return string.IsNullOrWhiteSpace(valorAtual) ? valorAnterior : valorAtual;
+    }
+
+    private static ProdutoNormalizado CriarProduto(
+        IXLWorksheet worksheet,
+        int row,
+        string tabela,
+        string referencia,
+        string formatoAtual,
+        string linhaModeloAtual,
+        string superficie)
+    {
+        return new ProdutoNormalizado
+        {
+            TipoTabela = tabela,
+            Formato = formatoAtual,
+            Referencia = referencia,
+            Linha = linhaModeloAtual,
+            Colecao = worksheet.Cell(row, 4).GetString().Trim(),
+            Cor = worksheet.Cell(row, 5).GetString().Trim(),
+            Superficie = superficie,
+            Grupo = "PORCELANATO",
+            SubGrupo = superficie.ToUpper(),
+            Marca = "ARC HOME",
+            Modelo = formatoAtual.Replace(" ", string.Empty).ToUpper(),
+            Faces = ParseInt(worksheet.Cell(row, 7).GetString()),
+            VariacaoTonalidade = worksheet.Cell(row, 8).GetString().Trim(),
+            M2Caixa = ParseDecimal(worksheet.Cell(row, 11).GetString()),
+            Espessura = ParseDecimal(worksheet.Cell(row, 17).GetString())
+        };
+    }
+
+    private static void PreencherPrecos(ProdutoNormalizado produto, IXLWorksheet worksheet, int row, string tabela)
+    {
+        produto.PrecoTabela = ParseDecimal(worksheet.Cell(row, 18).GetString());
+        produto.PrecoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetString());
+        produto.PrecoVenda = DeveUsarPrecoDescontoComoVenda(tabela)
+            ? produto.PrecoDesconto
+            : ParseDecimal(worksheet.Cell(row, 20).GetString());
+    }
+
+    private static bool DeveUsarPrecoDescontoComoVenda(string tabela)
+    {
+        return tabela.Equals("VAREJO", StringComparison.OrdinalIgnoreCase) ||
+            tabela.Equals("VINILICO", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizarSuperficie(string valor, string tabela)
+    {
+        var superficie = valor.Trim();
+
+        if (tabela.Equals("VAREJO", StringComparison.OrdinalIgnoreCase) &&
+            superficie.Equals("NATURAL SENSE UP", StringComparison.OrdinalIgnoreCase))
+        {
+            return "NATURAL SENSEUP";
+        }
+
+        return superficie;
     }
 }
