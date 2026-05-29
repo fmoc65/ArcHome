@@ -109,7 +109,7 @@ public class ExcelReaderService : IExcelReader
             Superficie = superficie,
             Grupo = "PORCELANATO",
             SubGrupo = superficie.ToUpper(),
-            Marca = "ARC HOME",
+            Marca = "VILLAGRES",
             Modelo = formatoAtual.Replace(" ", string.Empty).ToUpper(),
             Faces = ParseInt(worksheet.Cell(row, 7).GetString()),
             VariacaoTonalidade = worksheet.Cell(row, 8).GetString().Trim(),
@@ -120,11 +120,19 @@ public class ExcelReaderService : IExcelReader
 
     private static void PreencherPrecos(ProdutoNormalizado produto, IXLWorksheet worksheet, int row, string tabela)
     {
-        produto.PrecoTabela = ParseDecimal(worksheet.Cell(row, 18).GetString());
         produto.PrecoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetString());
+        produto.PrecoTabela = DeveUsarPrecoDescontoComoFabrica(tabela)
+            ? produto.PrecoDesconto
+            : ParseDecimal(worksheet.Cell(row, 18).GetString());
         produto.PrecoVenda = DeveUsarPrecoDescontoComoVenda(tabela)
             ? produto.PrecoDesconto
             : ParseDecimal(worksheet.Cell(row, 20).GetString());
+    }
+
+    private static bool DeveUsarPrecoDescontoComoFabrica(string tabela)
+    {
+        return tabela.Equals("VAREJO", StringComparison.OrdinalIgnoreCase) ||
+            tabela.Equals("VINILICO", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool DeveUsarPrecoDescontoComoVenda(string tabela)

@@ -46,14 +46,14 @@ public class VinilicoReaderService : IVinilicoReader
                 Cor = estado.Cor,
                 Superficie = estado.Superficie,
                 Grupo = "VINILICO",
-                SubGrupo = estado.Superficie.ToUpper(),
-                Marca = "ARC HOME",
+                SubGrupo = DeterminarSubGrupo(referencia, estado.Superficie),
+                Marca = "VILLAGRES",
                 Modelo = estado.Formato.Replace(" ", string.Empty).ToUpper(),
                 Faces = estado.Faces,
                 VariacaoTonalidade = estado.CapaDesgaste,
                 M2Caixa = estado.M2Caixa,
                 Espessura = estado.Espessura,
-                PrecoTabela = ParseDecimal(worksheet.Cell(row, 18).GetString()),
+                PrecoTabela = precoDesconto,
                 PrecoDesconto = precoDesconto,
                 PrecoVenda = precoDesconto
             });
@@ -116,6 +116,21 @@ public class VinilicoReaderService : IVinilicoReader
     {
         int.TryParse(valor, out var resultado);
         return resultado;
+    }
+
+    private static string DeterminarSubGrupo(string referencia, string superficie)
+    {
+        if (referencia.StartsWith("SPC", StringComparison.OrdinalIgnoreCase))
+        {
+            return "CLICADO";
+        }
+
+        if (referencia.StartsWith("LVT", StringComparison.OrdinalIgnoreCase))
+        {
+            return "COLADO";
+        }
+
+        return superficie.ToUpper();
     }
 
     private sealed class LinhaVinilico

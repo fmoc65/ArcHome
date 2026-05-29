@@ -56,8 +56,8 @@ public class DelcredereReaderService : IDelcredereReader
                     Cor = estado.Cor,
                     Superficie = estado.Superficie,
                     Grupo = "PORCELANATO",
-                    SubGrupo = estado.Superficie.ToUpper(),
-                    Marca = $"ARC HOME {tabelaPreco.Nome.Replace("DEL", string.Empty)}",
+                    SubGrupo = NormalizarSubGrupo(estado.Superficie),
+                    Marca = "VILLAGRES",
                     Modelo = estado.Formato.Replace(" ", string.Empty).ToUpper(),
                     TabelaPreco = tabelaPreco.Nome,
                     Faces = estado.Faces,
@@ -127,6 +127,13 @@ public class DelcredereReaderService : IDelcredereReader
     {
         int.TryParse(valor, out var resultado);
         return resultado;
+    }
+
+    private static string NormalizarSubGrupo(string superficie)
+    {
+        return superficie.Equals("NATURAL SENSE UP", StringComparison.OrdinalIgnoreCase)
+            ? "NATURAL SENSEUP"
+            : superficie.ToUpper();
     }
 
     private sealed class LinhaDelcredere

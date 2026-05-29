@@ -51,14 +51,14 @@ public class LastraReaderService : ILastraReader
                 Cor = estado.Cor,
                 Superficie = estado.Superficie,
                 Grupo = "PORCELANATO",
-                SubGrupo = estado.Superficie.ToUpper(),
-                Marca = "ARC HOME",
+                SubGrupo = NormalizarSubGrupo(estado.Superficie),
+                Marca = "VILLAGRES",
                 Modelo = estado.Formato.Replace(" ", string.Empty).ToUpper(),
                 Faces = estado.Faces,
                 VariacaoTonalidade = estado.VariacaoTonalidade,
                 M2Caixa = estado.M2Caixa,
                 Espessura = estado.Espessura,
-                PrecoTabela = ParseDecimal(worksheet.Cell(row, 18).GetFormattedString()),
+                PrecoTabela = precoDesconto,
                 PrecoDesconto = precoDesconto,
                 PrecoVenda = precoDesconto
             });
@@ -121,6 +121,13 @@ public class LastraReaderService : ILastraReader
     {
         int.TryParse(valor, out var resultado);
         return resultado;
+    }
+
+    private static string NormalizarSubGrupo(string superficie)
+    {
+        return superficie.Equals("NATURAL SENSE UP", StringComparison.OrdinalIgnoreCase)
+            ? "NATURAL SENSEUP"
+            : superficie.ToUpper();
     }
 
     private sealed class LinhaLastra
