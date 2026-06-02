@@ -1,4 +1,4 @@
-using R3Integrador.Application.DTOs;
+﻿using R3Integrador.Application.DTOs;
 using System.Text.RegularExpressions;
 
 namespace R3Integrador.Application.Mappers;
@@ -26,7 +26,7 @@ public static class ProdutoErpMapper
             Ncm = "69072100",
             UfOrigem = "SP",
             
-            // Mapeamento correto dos preços nas colunas oficiais do ERP
+            // Mapeamento correto dos preÃ§os nas colunas oficiais do ERP
             PrecoVenda = produto.PrecoVenda, 
             PrecoFabrica = produto.PrecoTabela,
             DescontoPercentual = CalcularDescontoPercentual(produto),
@@ -36,8 +36,8 @@ public static class ProdutoErpMapper
             Iva = 0,
             FreteReais = 0,
             FretePercentual = 0,
-            Unidade = "CX",
-            QtdeEmbalagemVenda = 1,
+            Unidade = "M2",
+            QtdeEmbalagemVenda = ObterM2PorCaixa(produto),
             
             Cst = "060",
             AliquotaCofinsCst = "01",
@@ -48,15 +48,15 @@ public static class ProdutoErpMapper
             CfopFora = "6404",
             
             PesoLiquido = 0,
-            PesoBruto = produto.M2Caixa, // Se o ERP exigir o peso por caixa, mapeamos aqui
-            QtdeEmbalagemCompra = 1,
+            PesoBruto = 0,
+            QtdeEmbalagemCompra = ObterM2PorCaixa(produto),
             ValorPi = 0,
             AliquotaCofins = 0,
             AliquotaPis = 0,
             PercentualSt = 0,
             UnidFabril = "CX",
             
-            // Dica: Como o ERP não tem coluna de "Espessura", guardamos essa informação na Observação!
+            // Dica: Como o ERP nÃ£o tem coluna de "Espessura", guardamos essa informaÃ§Ã£o na ObservaÃ§Ã£o!
             Observacao = $"Importado via R3Integrador - Tabela {produto.TipoTabela} - Espessura: {produto.Espessura}mm",
             
             DiferencaIcms = 0,
@@ -64,8 +64,13 @@ public static class ProdutoErpMapper
             ReducaoBaseSt = 0
             
             // <-- AS LINHAS "PrecoFracionado = ..." E "Espessura = ..." FORAM REMOVIDAS DAQUI
-            // Pois elas não existem no DTO de 60 colunas exigido pelo layout do ERP.
+            // Pois elas nÃ£o existem no DTO de 60 colunas exigido pelo layout do ERP.
         };
+    }
+
+    private static decimal ObterM2PorCaixa(ProdutoNormalizado produto)
+    {
+        return produto.M2Caixa > 0 ? produto.M2Caixa : 1;
     }
 
     private static string GerarDescricao(ProdutoNormalizado produto)
