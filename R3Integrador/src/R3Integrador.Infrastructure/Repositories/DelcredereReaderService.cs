@@ -66,7 +66,7 @@ public class DelcredereReaderService : IDelcredereReader
                     Espessura = estado.Espessura,
                     PrecoTabela = preco,
                     PrecoDesconto = preco,
-                    PrecoVenda = preco
+                    PrecoVenda = CalcularPrecoVendaDelcredere(preco)
                 });
             }
         }
@@ -134,6 +134,11 @@ public class DelcredereReaderService : IDelcredereReader
         return superficie.Equals("NATURAL SENSE UP", StringComparison.OrdinalIgnoreCase)
             ? "NATURAL SENSEUP"
             : superficie.ToUpper();
+    }
+
+    private static decimal CalcularPrecoVendaDelcredere(decimal preco)
+    {
+        return Math.Round(preco * 1.0065m, 2);
     }
 
     private sealed class LinhaDelcredere

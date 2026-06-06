@@ -121,24 +121,28 @@ public class ExcelReaderService : IExcelReader
     private static void PreencherPrecos(ProdutoNormalizado produto, IXLWorksheet worksheet, int row, string tabela)
     {
         produto.PrecoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetString());
-        produto.PrecoTabela = DeveUsarPrecoDescontoComoFabrica(tabela)
-            ? produto.PrecoDesconto
+        produto.PrecoTabela = DeveAplicarRegraRevenda(tabela)
+            ? CalcularCustoFinalRevenda(produto.PrecoDesconto)
             : ParseDecimal(worksheet.Cell(row, 18).GetString());
-        produto.PrecoVenda = DeveUsarPrecoDescontoComoVenda(tabela)
-            ? produto.PrecoDesconto
+        produto.PrecoVenda = DeveAplicarRegraRevenda(tabela)
+            ? CalcularPrecoVendaRevenda(produto.PrecoTabela)
             : ParseDecimal(worksheet.Cell(row, 20).GetString());
     }
 
-    private static bool DeveUsarPrecoDescontoComoFabrica(string tabela)
+    private static bool DeveAplicarRegraRevenda(string tabela)
     {
         return tabela.Equals("VAREJO", StringComparison.OrdinalIgnoreCase) ||
             tabela.Equals("VINILICO", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool DeveUsarPrecoDescontoComoVenda(string tabela)
+    private static decimal CalcularCustoFinalRevenda(decimal precoDesconto)
     {
-        return tabela.Equals("VAREJO", StringComparison.OrdinalIgnoreCase) ||
-            tabela.Equals("VINILICO", StringComparison.OrdinalIgnoreCase);
+        return Math.Round(precoDesconto * 1.1051m + 1.50m, 2);
+    }
+
+    private static decimal CalcularPrecoVendaRevenda(decimal custoFinal)
+    {
+        return Math.Round(custoFinal * 1.75m, 2);
     }
 
     private static string NormalizarSuperficie(string valor, string tabela)

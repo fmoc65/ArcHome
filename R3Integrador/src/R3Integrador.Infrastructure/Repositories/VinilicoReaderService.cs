@@ -35,6 +35,7 @@ public class VinilicoReaderService : IVinilicoReader
 
             estado.Atualizar(worksheet, row);
             var precoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetString());
+            var custoFinal = CalcularCustoFinalRevenda(precoDesconto);
 
             produtos.Add(new ProdutoNormalizado
             {
@@ -53,9 +54,9 @@ public class VinilicoReaderService : IVinilicoReader
                 VariacaoTonalidade = estado.CapaDesgaste,
                 M2Caixa = estado.M2Caixa,
                 Espessura = estado.Espessura,
-                PrecoTabela = precoDesconto,
+                PrecoTabela = custoFinal,
                 PrecoDesconto = precoDesconto,
-                PrecoVenda = precoDesconto
+                PrecoVenda = CalcularPrecoVendaRevenda(custoFinal)
             });
         }
 
@@ -131,6 +132,16 @@ public class VinilicoReaderService : IVinilicoReader
         }
 
         return superficie.ToUpper();
+    }
+
+    private static decimal CalcularCustoFinalRevenda(decimal precoDesconto)
+    {
+        return Math.Round(precoDesconto * 1.1051m + 1.50m, 2);
+    }
+
+    private static decimal CalcularPrecoVendaRevenda(decimal custoFinal)
+    {
+        return Math.Round(custoFinal * 1.75m, 2);
     }
 
     private sealed class LinhaVinilico

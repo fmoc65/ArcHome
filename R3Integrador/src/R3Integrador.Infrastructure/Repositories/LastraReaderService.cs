@@ -40,6 +40,7 @@ public class LastraReaderService : ILastraReader
 
             estado.Atualizar(worksheet, row);
             var precoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetFormattedString());
+            var custoFinal = CalcularCustoFinalRevenda(precoDesconto);
 
             produtos.Add(new ProdutoNormalizado
             {
@@ -58,9 +59,9 @@ public class LastraReaderService : ILastraReader
                 VariacaoTonalidade = estado.VariacaoTonalidade,
                 M2Caixa = estado.M2Caixa,
                 Espessura = estado.Espessura,
-                PrecoTabela = precoDesconto,
+                PrecoTabela = custoFinal,
                 PrecoDesconto = precoDesconto,
-                PrecoVenda = precoDesconto
+                PrecoVenda = CalcularPrecoVendaRevenda(custoFinal)
             });
         }
 
@@ -128,6 +129,16 @@ public class LastraReaderService : ILastraReader
         return superficie.Equals("NATURAL SENSE UP", StringComparison.OrdinalIgnoreCase)
             ? "NATURAL SENSEUP"
             : superficie.ToUpper();
+    }
+
+    private static decimal CalcularCustoFinalRevenda(decimal precoDesconto)
+    {
+        return Math.Round(precoDesconto * 1.1051m + 1.50m, 2);
+    }
+
+    private static decimal CalcularPrecoVendaRevenda(decimal custoFinal)
+    {
+        return Math.Round(custoFinal * 1.75m, 2);
     }
 
     private sealed class LinhaLastra
