@@ -35,7 +35,7 @@ public class DelcredereReaderService : IDelcredereReader
         {
             var referencia = worksheet.Cell(row, 2).GetString().Trim();
 
-            if (string.IsNullOrWhiteSpace(referencia) || EhLinhaDeCabecalho(referencia))
+            if (!EhReferenciaValida(referencia))
             {
                 continue;
             }
@@ -83,6 +83,13 @@ public class DelcredereReaderService : IDelcredereReader
 
         return referencia.Equals("Ref.", StringComparison.OrdinalIgnoreCase)
             || referenciaNormalizada.Equals("FORMATO", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool EhReferenciaValida(string referencia)
+    {
+        return !string.IsNullOrWhiteSpace(referencia) &&
+            !EhLinhaDeCabecalho(referencia) &&
+            referencia.All(char.IsDigit);
     }
 
     private static string RemoverAcentos(string valor)
