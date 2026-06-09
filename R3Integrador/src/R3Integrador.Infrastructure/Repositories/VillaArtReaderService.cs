@@ -51,7 +51,7 @@ public class VillaArtReaderService : IVillaArtReader
                 Superficie = estado.Superficie,
                 Grupo = "PORCELANATO",
                 SubGrupo = NormalizarSubGrupo(estado.Superficie),
-                Marca = "VILLAGRES",
+                Marca = "VILLA ART",
                 Modelo = estado.Formato.Replace(" ", string.Empty).ToUpper(),
                 Faces = estado.Faces,
                 VariacaoTonalidade = estado.VariacaoTonalidade,

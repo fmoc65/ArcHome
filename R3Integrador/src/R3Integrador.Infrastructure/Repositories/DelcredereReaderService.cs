@@ -3,6 +3,7 @@ using R3Integrador.Application.DTOs;
 using R3Integrador.Application.Interfaces;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace R3Integrador.Infrastructure.Repositories;
 
@@ -12,9 +13,12 @@ public class DelcredereReaderService : IDelcredereReader
 
     private static readonly (string Nome, int Coluna)[] TabelasPreco =
     [
-        ("DEL20", 18),
-        ("DEL25", 19),
-        ("DEL30", 20)
+        ("DEL5", 18),
+        ("DEL10", 19),
+        ("DEL15", 20),
+        ("DEL20", 21),
+        ("DEL25", 22),
+        ("DEL30", 23)
     ];
 
     public async Task<List<ProdutoNormalizado>> LerAsync(string caminhoArquivo)
@@ -33,13 +37,14 @@ public class DelcredereReaderService : IDelcredereReader
 
         for (var row = 1; row <= ultimaLinha; row++)
         {
-            var referencia = worksheet.Cell(row, 2).GetString().Trim();
+            var referenciaOriginal = worksheet.Cell(row, 2).GetString().Trim();
 
-            if (!EhReferenciaValida(referencia))
+            if (!EhReferenciaValida(referenciaOriginal))
             {
                 continue;
             }
 
+            var referencia = ExtrairReferencia(referenciaOriginal);
             estado.Atualizar(worksheet, row);
 
             foreach (var tabelaPreco in TabelasPreco)
@@ -57,7 +62,7 @@ public class DelcredereReaderService : IDelcredereReader
                     Superficie = estado.Superficie,
                     Grupo = "PORCELANATO",
                     SubGrupo = NormalizarSubGrupo(estado.Superficie),
-                    Marca = "VILLAGRES",
+                    Marca = DeterminarMarca(referenciaOriginal),
                     Modelo = estado.Formato.Replace(" ", string.Empty).ToUpper(),
                     TabelaPreco = tabelaPreco.Nome,
                     Faces = estado.Faces,
@@ -89,7 +94,20 @@ public class DelcredereReaderService : IDelcredereReader
     {
         return !string.IsNullOrWhiteSpace(referencia) &&
             !EhLinhaDeCabecalho(referencia) &&
-            referencia.All(char.IsDigit);
+            Regex.IsMatch(referencia, @"^\d+");
+    }
+
+    private static string ExtrairReferencia(string referencia)
+    {
+        var match = Regex.Match(referencia, @"^\d+");
+        return match.Success ? match.Value : referencia.Trim();
+    }
+
+    private static string DeterminarMarca(string referencia)
+    {
+        return referencia.Contains("VILLA ART", StringComparison.OrdinalIgnoreCase)
+            ? "VILLA ART"
+            : "VILLAGRES";
     }
 
     private static string RemoverAcentos(string valor)

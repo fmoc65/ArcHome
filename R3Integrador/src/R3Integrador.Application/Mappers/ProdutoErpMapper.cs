@@ -23,7 +23,7 @@ public static class ProdutoErpMapper
             Modelo = produto.Modelo,
             Voltagem = "N/A",
             Cor = produto.Cor,
-            Ncm = "69072100",
+            Ncm = ObterNcm(produto),
             UfOrigem = "SP",
             
             // Mapeamento correto dos preÃ§os nas colunas oficiais do ERP
@@ -49,7 +49,7 @@ public static class ProdutoErpMapper
             
             PesoLiquido = 0,
             PesoBruto = 0,
-            QtdeEmbalagemCompra = ObterM2PorCaixa(produto),
+            QtdeEmbalagemCompra = 1,
             ValorPi = 0,
             AliquotaCofins = 0,
             AliquotaPis = 0,
@@ -66,6 +66,13 @@ public static class ProdutoErpMapper
             // <-- AS LINHAS "PrecoFracionado = ..." E "Espessura = ..." FORAM REMOVIDAS DAQUI
             // Pois elas nÃ£o existem no DTO de 60 colunas exigido pelo layout do ERP.
         };
+    }
+
+    private static string ObterNcm(ProdutoNormalizado produto)
+    {
+        return produto.Referencia.Equals("120003", StringComparison.OrdinalIgnoreCase)
+            ? "69072200"
+            : "69072100";
     }
 
     private static decimal ObterM2PorCaixa(ProdutoNormalizado produto)

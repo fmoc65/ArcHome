@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging; // Necessário para ClearProviders
 using R3Integrador.Application.Interfaces;
 using R3Integrador.Application.Services;
@@ -8,6 +9,10 @@ using R3Integrador.Infrastructure.Repositories;
 using Serilog;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Configuration.AddJsonFile(
+    Path.Combine(AppContext.BaseDirectory, "appsettings.json"),
+    optional: true,
+    reloadOnChange: false);
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
@@ -22,6 +27,7 @@ builder.Services.AddSingleton<IVinilicoReader, VinilicoReaderService>();
 builder.Services.AddSingleton<IDelcredereReader, DelcredereReaderService>();
 builder.Services.AddSingleton<IVillaArtReader, VillaArtReaderService>();
 builder.Services.AddSingleton<ILastraReader, LastraReaderService>();
+builder.Services.AddSingleton<IRubinettosReader, RubinettosReaderService>();
 builder.Services.AddSingleton<ImportacaoService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExportService>();
 
@@ -34,7 +40,11 @@ bool executando = true;
 
 while (executando)
 {
-    Console.Clear();
+    if (!Console.IsInputRedirected)
+    {
+        Console.Clear();
+    }
+
     Console.ForegroundColor = ConsoleColor.Cyan;
     Console.WriteLine("=================================================================");
     Console.WriteLine("             R3 INTEGRADOR - COMPATIBILIZADOR DE FORNECEDORES    ");
@@ -49,6 +59,7 @@ while (executando)
     Console.WriteLine("  [FORNECEDORES ESPECÍFICOS]");
     Console.WriteLine("    4 - Processar Planilha TABELA DELCREDERE VAREJO");
     Console.WriteLine("    5 - Processar Planilha VILLA ART - BOUTIQUE");
+    Console.WriteLine("    6 - Processar Planilha RUBINETTOS");
     Console.ForegroundColor = ConsoleColor.Red;
     Console.WriteLine("    0 - Sair");
     Console.ResetColor();
@@ -65,6 +76,7 @@ while (executando)
         case "3": await ExecutarAcaoAsync(() => importacaoService.ProcessarLastraAsync(ObterCaminho())); break;
         case "4": await ExecutarAcaoAsync(() => importacaoService.ProcessarDelcredereAsync(ObterCaminho())); break;
         case "5": await ExecutarAcaoAsync(() => importacaoService.ProcessarVillaArtAsync(ObterCaminho())); break;
+        case "6": await ExecutarAcaoAsync(() => importacaoService.ProcessarRubinettosAsync(ObterCaminho())); break;
         case "0": executando = false; break;
         default: Console.WriteLine("Opção inválida."); break;
     }

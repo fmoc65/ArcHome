@@ -13,6 +13,7 @@ public class ImportacaoService
     private readonly IDelcredereReader _delcredereReader;
     private readonly IVillaArtReader _villaArtReader;
     private readonly ILastraReader _lastraReader;
+    private readonly IRubinettosReader _rubinettosReader;
     private readonly IExcelExporter _excelExporter;
     private readonly ILogger<ImportacaoService> _logger;
     private readonly string _pastaSaida;
@@ -23,6 +24,7 @@ public class ImportacaoService
         IDelcredereReader delcredereReader,
         IVillaArtReader villaArtReader,
         ILastraReader lastraReader,
+        IRubinettosReader rubinettosReader,
         IExcelExporter excelExporter,
         ILogger<ImportacaoService> logger,
         IConfiguration configuration)
@@ -32,6 +34,7 @@ public class ImportacaoService
         _delcredereReader = delcredereReader;
         _villaArtReader = villaArtReader;
         _lastraReader = lastraReader;
+        _rubinettosReader = rubinettosReader;
         _excelExporter = excelExporter;
         _logger = logger;
         _pastaSaida = configuration["Diretorios:PastaSaida"]
@@ -74,11 +77,17 @@ public class ImportacaoService
 
         RegistrarNormalizados(tabela, caminhoArquivo, produtosBrutos);
 
-        var produtosErp = produtosBrutos.Select(ProdutoErpMapper.Map).ToList();
-        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_DELCREDERE_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        foreach (var grupoTabela in produtosBrutos.GroupBy(p => p.TabelaPreco).OrderBy(g => g.Key))
+        {
+            var produtosErp = grupoTabela.Select(ProdutoErpMapper.Map).ToList();
+            var sufixoTabela = string.IsNullOrWhiteSpace(grupoTabela.Key)
+                ? "SEM_TABELA"
+                : grupoTabela.Key;
+            var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_DELCREDERE_{sufixoTabela}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
-        RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
-        await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
+            RegistrarExportacao($"{tabela} {sufixoTabela}", produtosErp.Count, arquivoSaida);
+            await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
+        }
 
         _logger.LogInformation("Processamento e exportacao Del Credere concluidos com sucesso.");
     }
@@ -152,6 +161,32 @@ public class ImportacaoService
         _logger.LogInformation("Processamento e exportacao de Vinilicos concluido com sucesso.");
     }
 
+    public async Task ProcessarRubinettosAsync(string caminhoArquivo)
+    {
+        const string tabela = "RUBINETTOS";
+        _logger.LogInformation("Iniciando importacao Rubinettos. Arquivo={Arquivo}", caminhoArquivo);
+
+        var produtosErp = await _rubinettosReader.LerAsync(caminhoArquivo);
+
+        if (!produtosErp.Any())
+        {
+            _logger.LogWarning("Nenhum produto valido encontrado na tabela {Tabela}.", tabela);
+            return;
+        }
+
+        foreach (var grupoMarca in produtosErp.GroupBy(p => p.Marca).OrderBy(g => g.Key))
+        {
+            var produtosMarca = grupoMarca.ToList();
+            var sufixoMarca = SanitizarNomeArquivo(grupoMarca.Key);
+            var arquivoSaida = CriarCaminhoSaida($"RUBINETTOS_ERP_{sufixoMarca}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+
+            RegistrarExportacao($"{tabela} {grupoMarca.Key}", produtosMarca.Count, arquivoSaida);
+            await _excelExporter.ExportarAsync(produtosMarca, arquivoSaida);
+        }
+
+        _logger.LogInformation("Processamento e exportacao Rubinettos concluidos com sucesso.");
+    }
+
     private bool PossuiProdutos(List<ProdutoNormalizado>? produtos, string tabela)
     {
         if (produtos != null && produtos.Any())
@@ -210,5 +245,11 @@ public class ImportacaoService
     {
         Directory.CreateDirectory(_pastaSaida);
         return Path.Combine(_pastaSaida, nomeArquivo);
+    }
+
+    private static string SanitizarNomeArquivo(string valor)
+    {
+        var nome = string.Join("_", valor.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
+        return nome.Replace(" ", "_").ToUpperInvariant();
     }
 }
