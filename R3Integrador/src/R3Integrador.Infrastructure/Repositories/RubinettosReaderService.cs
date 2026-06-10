@@ -8,6 +8,8 @@ namespace R3Integrador.Infrastructure.Repositories;
 
 public class RubinettosReaderService : IRubinettosReader
 {
+    private const decimal AliquotaIcmsInternaPadrao = 18m;
+
     public async Task<List<ProdutoErpDto>> LerAsync(string caminhoArquivo)
     {
         var produtos = new List<ProdutoErpDto>();
@@ -32,6 +34,7 @@ public class RubinettosReaderService : IRubinettosReader
                 var unidade = NormalizarUnidade(worksheet.Cell(row, 22).GetString());
                 var ncm = SomenteDigitos(worksheet.Cell(row, 29).GetString());
                 var cest = worksheet.Cell(row, 30).GetString().Trim();
+                var aliqIcmsInterna = ParseDecimal(worksheet.Cell(row, 27).GetFormattedString());
 
                 produtos.Add(new ProdutoErpDto
                 {
@@ -45,7 +48,7 @@ public class RubinettosReaderService : IRubinettosReader
                     Marca = marca,
                     Linha = linha,
                     Modelo = NormalizarTexto(worksheet.Cell(row, 5).GetString()),
-                    Voltagem = "N/A",
+                    Voltagem = string.Empty,
                     Cor = NormalizarTexto(worksheet.Cell(row, 10).GetString()),
                     Ncm = ncm,
                     UfOrigem = "SP",
@@ -54,7 +57,7 @@ public class RubinettosReaderService : IRubinettosReader
                     DescontoPercentual = 0,
                     IpiPercentual = ParseDecimal(worksheet.Cell(row, 24).GetFormattedString()),
                     AliqIcmsOrigem = ParseDecimal(worksheet.Cell(row, 25).GetFormattedString()),
-                    AliqIcmsInterna = ParseDecimal(worksheet.Cell(row, 27).GetFormattedString()),
+                    AliqIcmsInterna = ObterAliquotaIcmsInterna(aliqIcmsInterna),
                     Iva = ParseDecimal(worksheet.Cell(row, 26).GetFormattedString()),
                     FreteReais = 0,
                     FretePercentual = 0,
@@ -129,6 +132,11 @@ public class RubinettosReaderService : IRubinettosReader
     {
         var observacao = $"Importado via R3Integrador - Tabela Rubinettos - Aba {nomeAba}";
         return string.IsNullOrWhiteSpace(cest) ? observacao : $"{observacao} - CEST: {cest}";
+    }
+
+    private static decimal ObterAliquotaIcmsInterna(decimal aliquotaInformada)
+    {
+        return aliquotaInformada > 0 ? aliquotaInformada : AliquotaIcmsInternaPadrao;
     }
 
     private static decimal ParseDecimal(string valor)

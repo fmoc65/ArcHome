@@ -19,22 +19,17 @@ public class ImportacaoService
     private readonly string _pastaSaida;
 
     public ImportacaoService(
-        IExcelReader excelReader,
-        IVinilicoReader vinilicoReader,
-        IDelcredereReader delcredereReader,
-        IVillaArtReader villaArtReader,
-        ILastraReader lastraReader,
-        IRubinettosReader rubinettosReader,
+        ImportacaoReaderSet readers,
         IExcelExporter excelExporter,
         ILogger<ImportacaoService> logger,
         IConfiguration configuration)
     {
-        _excelReader = excelReader;
-        _vinilicoReader = vinilicoReader;
-        _delcredereReader = delcredereReader;
-        _villaArtReader = villaArtReader;
-        _lastraReader = lastraReader;
-        _rubinettosReader = rubinettosReader;
+        _excelReader = readers.ExcelReader;
+        _vinilicoReader = readers.VinilicoReader;
+        _delcredereReader = readers.DelcredereReader;
+        _villaArtReader = readers.VillaArtReader;
+        _lastraReader = readers.LastraReader;
+        _rubinettosReader = readers.RubinettosReader;
         _excelExporter = excelExporter;
         _logger = logger;
         _pastaSaida = configuration["Diretorios:PastaSaida"]
@@ -77,15 +72,24 @@ public class ImportacaoService
 
         RegistrarNormalizados(tabela, caminhoArquivo, produtosBrutos);
 
-        foreach (var grupoTabela in produtosBrutos.GroupBy(p => p.TabelaPreco).OrderBy(g => g.Key))
+        foreach (var grupoTabelaMarca in produtosBrutos
+            .GroupBy(p => new { p.TabelaPreco, p.Marca })
+            .OrderBy(g => g.Key.TabelaPreco)
+            .ThenBy(g => g.Key.Marca))
         {
-            var produtosErp = grupoTabela.Select(ProdutoErpMapper.Map).ToList();
-            var sufixoTabela = string.IsNullOrWhiteSpace(grupoTabela.Key)
+            var produtosErp = grupoTabelaMarca.Select(ProdutoErpMapper.Map).ToList();
+            var sufixoTabela = string.IsNullOrWhiteSpace(grupoTabelaMarca.Key.TabelaPreco)
                 ? "SEM_TABELA"
-                : grupoTabela.Key;
-            var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_DELCREDERE_{sufixoTabela}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+                : grupoTabelaMarca.Key.TabelaPreco;
+            var sufixoMarca = SanitizarNomeArquivo(grupoTabelaMarca.Key.Marca);
+            var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_DELCREDERE_{sufixoTabela}_{sufixoMarca}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
-            RegistrarExportacao($"{tabela} {sufixoTabela}", produtosErp.Count, arquivoSaida);
+            foreach (var produto in produtosErp)
+            {
+                produto.Voltagem = string.Empty;
+            }
+
+            RegistrarExportacao($"{tabela} {sufixoTabela} {grupoTabelaMarca.Key.Marca}", produtosErp.Count, arquivoSaida);
             await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
         }
 

@@ -28,6 +28,15 @@ builder.Services.AddSingleton<IDelcredereReader, DelcredereReaderService>();
 builder.Services.AddSingleton<IVillaArtReader, VillaArtReaderService>();
 builder.Services.AddSingleton<ILastraReader, LastraReaderService>();
 builder.Services.AddSingleton<IRubinettosReader, RubinettosReaderService>();
+builder.Services.AddSingleton(sp => new ImportacaoReaderSet
+{
+    ExcelReader = sp.GetRequiredService<IExcelReader>(),
+    VinilicoReader = sp.GetRequiredService<IVinilicoReader>(),
+    DelcredereReader = sp.GetRequiredService<IDelcredereReader>(),
+    VillaArtReader = sp.GetRequiredService<IVillaArtReader>(),
+    LastraReader = sp.GetRequiredService<ILastraReader>(),
+    RubinettosReader = sp.GetRequiredService<IRubinettosReader>()
+});
 builder.Services.AddSingleton<ImportacaoService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExportService>();
 
