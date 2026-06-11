@@ -14,6 +14,7 @@ public class ImportacaoService
     private readonly IVillaArtReader _villaArtReader;
     private readonly ILastraReader _lastraReader;
     private readonly IRubinettosReader _rubinettosReader;
+    private readonly IRocaReader _rocaReader;
     private readonly IExcelExporter _excelExporter;
     private readonly ILogger<ImportacaoService> _logger;
     private readonly string _pastaSaida;
@@ -30,6 +31,7 @@ public class ImportacaoService
         _villaArtReader = readers.VillaArtReader;
         _lastraReader = readers.LastraReader;
         _rubinettosReader = readers.RubinettosReader;
+        _rocaReader = readers.RocaReader;
         _excelExporter = excelExporter;
         _logger = logger;
         _pastaSaida = configuration["Diretorios:PastaSaida"]
@@ -87,9 +89,14 @@ public class ImportacaoService
             foreach (var produto in produtosErp)
             {
                 produto.Voltagem = string.Empty;
+                produto.Marca = ObterMarcaRepresentada(grupoTabelaMarca.Key.Marca, grupoTabelaMarca.Key.TabelaPreco);
+                produto.EnquadramentoIpi = "999";
+                produto.AliquotaIbs = "0,1";
+                produto.AliquotaCbs = "0,9";
+                produto.ClassificacaoTributaria = "000001";
             }
 
-            RegistrarExportacao($"{tabela} {sufixoTabela} {grupoTabelaMarca.Key.Marca}", produtosErp.Count, arquivoSaida);
+            RegistrarExportacao($"{tabela} {sufixoTabela} {produtosErp[0].Marca}", produtosErp.Count, arquivoSaida);
             await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
         }
 
@@ -191,6 +198,32 @@ public class ImportacaoService
         _logger.LogInformation("Processamento e exportacao Rubinettos concluidos com sucesso.");
     }
 
+    public async Task ProcessarRocaAsync(string caminhoArquivo)
+    {
+        const string tabela = "ROCA";
+        _logger.LogInformation("Iniciando importacao ROCA/CELITE. Arquivo={Arquivo}", caminhoArquivo);
+
+        var produtosErp = await _rocaReader.LerAsync(caminhoArquivo);
+
+        if (!produtosErp.Any())
+        {
+            _logger.LogWarning("Nenhum produto valido encontrado na tabela {Tabela}.", tabela);
+            return;
+        }
+
+        foreach (var grupoMarca in produtosErp.GroupBy(p => p.Marca).OrderBy(g => g.Key))
+        {
+            var produtosMarca = grupoMarca.ToList();
+            var sufixoMarca = SanitizarNomeArquivo(grupoMarca.Key);
+            var arquivoSaida = CriarCaminhoSaida($"ROCA_ERP_{sufixoMarca}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+
+            RegistrarExportacao($"{tabela} {grupoMarca.Key}", produtosMarca.Count, arquivoSaida);
+            await _excelExporter.ExportarAsync(produtosMarca, arquivoSaida);
+        }
+
+        _logger.LogInformation("Processamento e exportacao ROCA/CELITE concluidos com sucesso.");
+    }
+
     private bool PossuiProdutos(List<ProdutoNormalizado>? produtos, string tabela)
     {
         if (produtos != null && produtos.Any())
@@ -255,5 +288,13 @@ public class ImportacaoService
     {
         var nome = string.Join("_", valor.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
         return nome.Replace(" ", "_").ToUpperInvariant();
+    }
+
+    private static string ObterMarcaRepresentada(string marca, string tabelaPreco)
+    {
+        var percentual = tabelaPreco.Replace("DEL", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
+        return string.IsNullOrWhiteSpace(percentual)
+            ? marca
+            : $"{marca} {percentual}";
     }
 }

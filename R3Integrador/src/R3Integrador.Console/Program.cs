@@ -28,6 +28,7 @@ builder.Services.AddSingleton<IDelcredereReader, DelcredereReaderService>();
 builder.Services.AddSingleton<IVillaArtReader, VillaArtReaderService>();
 builder.Services.AddSingleton<ILastraReader, LastraReaderService>();
 builder.Services.AddSingleton<IRubinettosReader, RubinettosReaderService>();
+builder.Services.AddSingleton<IRocaReader, RocaReaderService>();
 builder.Services.AddSingleton(sp => new ImportacaoReaderSet
 {
     ExcelReader = sp.GetRequiredService<IExcelReader>(),
@@ -35,7 +36,8 @@ builder.Services.AddSingleton(sp => new ImportacaoReaderSet
     DelcredereReader = sp.GetRequiredService<IDelcredereReader>(),
     VillaArtReader = sp.GetRequiredService<IVillaArtReader>(),
     LastraReader = sp.GetRequiredService<ILastraReader>(),
-    RubinettosReader = sp.GetRequiredService<IRubinettosReader>()
+    RubinettosReader = sp.GetRequiredService<IRubinettosReader>(),
+    RocaReader = sp.GetRequiredService<IRocaReader>()
 });
 builder.Services.AddSingleton<ImportacaoService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExportService>();
@@ -69,6 +71,7 @@ while (executando)
     Console.WriteLine("    4 - Processar Planilha TABELA DELCREDERE VAREJO");
     Console.WriteLine("    5 - Processar Planilha VILLA ART - BOUTIQUE");
     Console.WriteLine("    6 - Processar Planilha RUBINETTOS");
+    Console.WriteLine("    7 - Processar Planilha ROCA");
     Console.ForegroundColor = ConsoleColor.Red;
     Console.WriteLine("    0 - Sair");
     Console.ResetColor();
@@ -86,6 +89,7 @@ while (executando)
         case "4": await ExecutarAcaoAsync(() => importacaoService.ProcessarDelcredereAsync(ObterCaminho())); break;
         case "5": await ExecutarAcaoAsync(() => importacaoService.ProcessarVillaArtAsync(ObterCaminho())); break;
         case "6": await ExecutarAcaoAsync(() => importacaoService.ProcessarRubinettosAsync(ObterCaminho())); break;
+        case "7": await ExecutarAcaoAsync(() => importacaoService.ProcessarRocaAsync(ObterCaminho())); break;
         case "0": executando = false; break;
         default: Console.WriteLine("Opção inválida."); break;
     }

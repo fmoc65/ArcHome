@@ -10,4 +10,5 @@ public sealed class ImportacaoReaderSet
     public required IVillaArtReader VillaArtReader { get; init; }
     public required ILastraReader LastraReader { get; init; }
     public required IRubinettosReader RubinettosReader { get; init; }
+    public required IRocaReader RocaReader { get; init; }
 }
