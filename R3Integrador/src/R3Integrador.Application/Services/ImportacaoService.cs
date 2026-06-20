@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using R3Integrador.Application.DTOs;
 using R3Integrador.Application.Interfaces;
@@ -54,7 +54,7 @@ public class ImportacaoService
         RegistrarNormalizados(tabela, caminhoArquivo, produtosBrutos);
 
         var produtosErp = produtosBrutos.Select(ProdutoErpMapper.Map).ToList();
-        var arquivoSaida = CriarCaminhoSaida($"{tabela}_ERP_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_{tabela}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
         RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
@@ -120,7 +120,7 @@ public class ImportacaoService
         RegistrarNormalizados(tabela, caminhoArquivo, produtosBrutos);
 
         var produtosErp = produtosBrutos.Select(ProdutoErpMapper.Map).ToList();
-        var arquivoSaida = CriarCaminhoSaida($"VILLA_ART_ERP_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_VILLA_ART_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
         RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
@@ -143,7 +143,7 @@ public class ImportacaoService
         RegistrarNormalizados(tabela, caminhoArquivo, produtosBrutos);
 
         var produtosErp = produtosBrutos.Select(ProdutoErpMapper.Map).ToList();
-        var arquivoSaida = CriarCaminhoSaida($"LASTRA_ERP_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_LASTRA_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
         RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
@@ -166,7 +166,7 @@ public class ImportacaoService
         RegistrarNormalizados(tabela, caminhoArquivo, produtosBrutos);
 
         var produtosErp = produtosBrutos.Select(ProdutoErpMapper.Map).ToList();
-        var arquivoSaida = CriarCaminhoSaida($"VINILICO_ERP_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_VINILICO_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
         RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
@@ -191,7 +191,7 @@ public class ImportacaoService
         {
             var produtosMarca = grupoMarca.ToList();
             var sufixoMarca = SanitizarNomeArquivo(grupoMarca.Key);
-            var arquivoSaida = CriarCaminhoSaida($"RUBINETTOS_ERP_{sufixoMarca}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+            var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_RUBINETTOS_{sufixoMarca}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
             RegistrarExportacao($"{tabela} {grupoMarca.Key}", produtosMarca.Count, arquivoSaida);
             await _excelExporter.ExportarAsync(produtosMarca, arquivoSaida);
@@ -217,7 +217,7 @@ public class ImportacaoService
         {
             var produtosMarca = grupoMarca.ToList();
             var sufixoMarca = SanitizarNomeArquivo(grupoMarca.Key);
-            var arquivoSaida = CriarCaminhoSaida($"ROCA_ERP_{sufixoMarca}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+            var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_ROCA_{sufixoMarca}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
             RegistrarExportacao($"{tabela} {grupoMarca.Key}", produtosMarca.Count, arquivoSaida);
             await _excelExporter.ExportarAsync(produtosMarca, arquivoSaida);
@@ -235,7 +235,7 @@ public class ImportacaoService
 
         foreach (var grupoTabela in produtosPorTabela.Where(g => g.Value.Any()).OrderBy(g => g.Key))
         {
-            var arquivoSaida = CriarCaminhoSaida($"IMERSI_ERP_{grupoTabela.Key}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+            var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_IMERSI_{grupoTabela.Key}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
 
             RegistrarExportacao($"{tabela} {grupoTabela.Key}", grupoTabela.Value.Count, arquivoSaida);
             await _excelExporter.ExportarAsync(grupoTabela.Value, arquivoSaida);
@@ -318,3 +318,4 @@ public class ImportacaoService
             : $"{marca} {percentual}";
     }
 }
+

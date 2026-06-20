@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using R3Integrador.Application.DTOs;
 using R3Integrador.Application.Interfaces;
 using System.Globalization;
@@ -120,7 +120,11 @@ public class ImersiReaderService : IImersiReader
             Observacao = CriarObservacao(tabelaPreco, tamanho, tributacao),
             DiferencaIcms = 0,
             ReducaoBaseIcms = 0,
-            ReducaoBaseSt = 0
+            ReducaoBaseSt = 0,
+            EnquadramentoIpi = "0",
+            AliquotaIbs = "0",
+            AliquotaCbs = "0",
+            ClassificacaoTributaria = "0"
         };
     }
 
@@ -242,3 +246,5 @@ public class ImersiReaderService : IImersiReader
         decimal MvaAjustada4,
         decimal MvaAjustada12);
 }
+
+

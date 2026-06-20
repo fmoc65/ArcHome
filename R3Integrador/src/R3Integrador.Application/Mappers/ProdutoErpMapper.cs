@@ -21,7 +21,7 @@ public static class ProdutoErpMapper
             Marca = produto.Marca,
             Linha = produto.Linha,
             Modelo = produto.Modelo,
-            Voltagem = "N/A",
+            Voltagem = string.Empty,
             Cor = produto.Cor,
             Ncm = ObterNcm(produto),
             UfOrigem = "SP",
@@ -61,7 +61,11 @@ public static class ProdutoErpMapper
             
             DiferencaIcms = 0,
             ReducaoBaseIcms = 0,
-            ReducaoBaseSt = 0
+            ReducaoBaseSt = 0,
+            EnquadramentoIpi = ObterEnquadramentoIpi(produto),
+            AliquotaIbs = ObterAliquotaIbs(produto),
+            AliquotaCbs = ObterAliquotaCbs(produto),
+            ClassificacaoTributaria = ObterClassificacaoTributaria(produto)
             
             // <-- AS LINHAS "PrecoFracionado = ..." E "Espessura = ..." FORAM REMOVIDAS DAQUI
             // Pois elas nÃ£o existem no DTO de 60 colunas exigido pelo layout do ERP.
@@ -70,9 +74,39 @@ public static class ProdutoErpMapper
 
     private static string ObterNcm(ProdutoNormalizado produto)
     {
+        if (!EhPorcelanato(produto))
+        {
+            return "0";
+        }
+
         return produto.Referencia.Equals("120003", StringComparison.OrdinalIgnoreCase)
             ? "69072200"
             : "69072100";
+    }
+
+    private static string ObterEnquadramentoIpi(ProdutoNormalizado produto)
+    {
+        return EhPorcelanato(produto) ? "999" : "0";
+    }
+
+    private static string ObterAliquotaIbs(ProdutoNormalizado produto)
+    {
+        return EhPorcelanato(produto) ? "0,1" : "0";
+    }
+
+    private static string ObterAliquotaCbs(ProdutoNormalizado produto)
+    {
+        return EhPorcelanato(produto) ? "0,9" : "0";
+    }
+
+    private static string ObterClassificacaoTributaria(ProdutoNormalizado produto)
+    {
+        return EhPorcelanato(produto) ? "000001" : "0";
+    }
+
+    private static bool EhPorcelanato(ProdutoNormalizado produto)
+    {
+        return produto.Grupo.Equals("PORCELANATO", StringComparison.OrdinalIgnoreCase);
     }
 
     private static decimal ObterM2PorCaixa(ProdutoNormalizado produto)
@@ -109,3 +143,6 @@ public static class ProdutoErpMapper
     }
 
 }
+
+
+

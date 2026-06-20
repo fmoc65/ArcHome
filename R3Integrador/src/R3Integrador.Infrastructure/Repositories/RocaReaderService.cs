@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using R3Integrador.Application.DTOs;
 using R3Integrador.Application.Interfaces;
 using System.Globalization;
@@ -50,7 +50,7 @@ public class RocaReaderService : IRocaReader
                 Voltagem = string.Empty,
                 Cor = NormalizarTexto(worksheet.Cell(row, 20).GetString()),
                 Ncm = SomenteDigitos(worksheet.Cell(row, 29).GetString()),
-                UfOrigem = NormalizarTexto(worksheet.Cell(row, 8).GetString()),
+                UfOrigem = "SP",
                 PrecoVenda = precoFinal,
                 PrecoFabrica = precoFinal,
                 DescontoPercentual = CalcularDescontoPercentual(precoTabela, precoFinal),
@@ -80,7 +80,11 @@ public class RocaReaderService : IRocaReader
                 Observacao = CriarObservacao(worksheet, row, cest),
                 DiferencaIcms = 0,
                 ReducaoBaseIcms = 0,
-                ReducaoBaseSt = 0
+                ReducaoBaseSt = 0,
+                    EnquadramentoIpi = "0",
+                    AliquotaIbs = "0",
+                    AliquotaCbs = "0",
+                    ClassificacaoTributaria = "0"
             });
         }
 
@@ -182,3 +186,6 @@ public class RocaReaderService : IRocaReader
         return resultado;
     }
 }
+
+
+

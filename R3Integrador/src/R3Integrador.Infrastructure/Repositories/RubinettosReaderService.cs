@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using R3Integrador.Application.DTOs;
 using R3Integrador.Application.Interfaces;
 using System.Globalization;
@@ -81,7 +81,11 @@ public class RubinettosReaderService : IRubinettosReader
                     Observacao = CriarObservacao(worksheet.Name, cest),
                     DiferencaIcms = 0,
                     ReducaoBaseIcms = 0,
-                    ReducaoBaseSt = 0
+                    ReducaoBaseSt = 0,
+                    EnquadramentoIpi = "0",
+                    AliquotaIbs = "0",
+                    AliquotaCbs = "0",
+                    ClassificacaoTributaria = "0"
                 });
             }
         }
@@ -162,3 +166,5 @@ public class RubinettosReaderService : IRubinettosReader
         return resultado;
     }
 }
+
+
