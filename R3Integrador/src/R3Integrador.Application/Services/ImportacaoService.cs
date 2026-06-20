@@ -15,6 +15,7 @@ public class ImportacaoService
     private readonly ILastraReader _lastraReader;
     private readonly IRubinettosReader _rubinettosReader;
     private readonly IRocaReader _rocaReader;
+    private readonly IImersiReader _imersiReader;
     private readonly IExcelExporter _excelExporter;
     private readonly ILogger<ImportacaoService> _logger;
     private readonly string _pastaSaida;
@@ -32,6 +33,7 @@ public class ImportacaoService
         _lastraReader = readers.LastraReader;
         _rubinettosReader = readers.RubinettosReader;
         _rocaReader = readers.RocaReader;
+        _imersiReader = readers.ImersiReader;
         _excelExporter = excelExporter;
         _logger = logger;
         _pastaSaida = configuration["Diretorios:PastaSaida"]
@@ -222,6 +224,24 @@ public class ImportacaoService
         }
 
         _logger.LogInformation("Processamento e exportacao ROCA/CELITE concluidos com sucesso.");
+    }
+
+    public async Task ProcessarImersiAsync(string caminhoArquivo)
+    {
+        const string tabela = "IMERSI";
+        _logger.LogInformation("Iniciando importacao Imersi. Arquivo={Arquivo}", caminhoArquivo);
+
+        var produtosPorTabela = await _imersiReader.LerAsync(caminhoArquivo);
+
+        foreach (var grupoTabela in produtosPorTabela.Where(g => g.Value.Any()).OrderBy(g => g.Key))
+        {
+            var arquivoSaida = CriarCaminhoSaida($"IMERSI_ERP_{grupoTabela.Key}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+
+            RegistrarExportacao($"{tabela} {grupoTabela.Key}", grupoTabela.Value.Count, arquivoSaida);
+            await _excelExporter.ExportarAsync(grupoTabela.Value, arquivoSaida);
+        }
+
+        _logger.LogInformation("Processamento e exportacao Imersi concluidos com sucesso.");
     }
 
     private bool PossuiProdutos(List<ProdutoNormalizado>? produtos, string tabela)
