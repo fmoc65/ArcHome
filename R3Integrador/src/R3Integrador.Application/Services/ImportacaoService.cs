@@ -92,6 +92,7 @@ public class ImportacaoService
             {
                 produto.Voltagem = string.Empty;
                 produto.Marca = ObterMarcaRepresentada(grupoTabelaMarca.Key.Marca, grupoTabelaMarca.Key.TabelaPreco);
+                produto.IpiPercentual = 0.65m;
                 produto.EnquadramentoIpi = "999";
                 produto.AliquotaIbs = "0,1";
                 produto.AliquotaCbs = "0,9";
@@ -318,4 +319,3 @@ public class ImportacaoService
             : $"{marca} {percentual}";
     }
 }
-

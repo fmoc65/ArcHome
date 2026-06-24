@@ -134,10 +134,18 @@ public class DelcredereReaderService : IDelcredereReader
         }
 
         valor = valor.Replace("R$", "")
-            .Replace(".", "")
-            .Replace(",", ".")
             .Replace("-", "")
+            .Replace("%", "")
             .Trim();
+
+        if (valor.Contains('.') && valor.Contains(','))
+        {
+            valor = valor.Replace(".", "").Replace(",", ".");
+        }
+        else if (valor.Contains(','))
+        {
+            valor = valor.Replace(",", ".");
+        }
 
         decimal.TryParse(
             valor,
