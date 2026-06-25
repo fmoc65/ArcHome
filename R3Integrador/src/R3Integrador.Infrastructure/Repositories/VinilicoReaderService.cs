@@ -54,6 +54,7 @@ public class VinilicoReaderService : IVinilicoReader
                 VariacaoTonalidade = estado.CapaDesgaste,
                 M2Caixa = estado.M2Caixa,
                 Espessura = estado.Espessura,
+                PesoBrutoM2 = estado.PesoBrutoM2,
                 PrecoTabela = custoFinal,
                 PrecoDesconto = precoDesconto,
                 PrecoVenda = CalcularPrecoVendaRevenda(custoFinal)
@@ -155,6 +156,7 @@ public class VinilicoReaderService : IVinilicoReader
         public string CapaDesgaste { get; private set; } = string.Empty;
         public decimal M2Caixa { get; private set; }
         public decimal Espessura { get; private set; }
+        public decimal PesoBrutoM2 { get; private set; }
 
         public void Atualizar(IXLWorksheet worksheet, int row)
         {
@@ -181,6 +183,12 @@ public class VinilicoReaderService : IVinilicoReader
             if (!string.IsNullOrWhiteSpace(espessura))
             {
                 Espessura = ParseDecimal(espessura);
+            }
+
+            var pesoBruto = worksheet.Cell(row, 15).GetString();
+            if (!string.IsNullOrWhiteSpace(pesoBruto))
+            {
+                PesoBrutoM2 = ParseDecimal(pesoBruto);
             }
         }
 

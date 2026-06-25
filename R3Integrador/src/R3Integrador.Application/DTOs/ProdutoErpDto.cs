@@ -15,7 +15,7 @@ public class ProdutoErpDto
     public string Modelo { get; set; } = string.Empty;              // Coluna 10
 
     // Colunas 11 a 20
-    public string Voltagem { get; set; } = "N/A";                    // Coluna 11
+    public string Voltagem { get; set; } = string.Empty;             // Coluna 11
     public string Cor { get; set; } = string.Empty;                 // Coluna 12
     public string Ncm { get; set; } = string.Empty;                 // Coluna 13
     public string UfOrigem { get; set; } = "SP";                    // Coluna 14

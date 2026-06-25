@@ -57,6 +57,7 @@ public class VillaArtReaderService : IVillaArtReader
                 VariacaoTonalidade = estado.VariacaoTonalidade,
                 M2Caixa = estado.M2Caixa,
                 Espessura = estado.Espessura,
+                PesoBrutoM2 = estado.PesoBrutoM2,
                 PrecoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetFormattedString()),
                 PrecoTabela = ParseDecimal(worksheet.Cell(row, 19).GetFormattedString()),
                 PrecoVenda = ParseDecimal(worksheet.Cell(row, 20).GetFormattedString())
@@ -139,6 +140,7 @@ public class VillaArtReaderService : IVillaArtReader
         public string VariacaoTonalidade { get; private set; } = string.Empty;
         public decimal M2Caixa { get; private set; }
         public decimal Espessura { get; private set; }
+        public decimal PesoBrutoM2 { get; private set; }
 
         public void Atualizar(IXLWorksheet worksheet, int row)
         {
@@ -165,6 +167,12 @@ public class VillaArtReaderService : IVillaArtReader
             if (!string.IsNullOrWhiteSpace(espessura))
             {
                 Espessura = ParseDecimal(espessura);
+            }
+
+            var pesoBruto = worksheet.Cell(row, 15).GetString();
+            if (!string.IsNullOrWhiteSpace(pesoBruto))
+            {
+                PesoBrutoM2 = ParseDecimal(pesoBruto);
             }
         }
 

@@ -21,4 +21,5 @@ public class ProdutoNormalizado
     public decimal PrecoVenda { get; set; }
     public decimal Espessura { get; set; }
     public decimal M2Caixa { get; set; }
+    public decimal PesoBrutoM2 { get; set; }
 }

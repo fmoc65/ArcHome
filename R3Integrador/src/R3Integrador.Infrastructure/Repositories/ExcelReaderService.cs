@@ -114,7 +114,8 @@ public class ExcelReaderService : IExcelReader
             Faces = ParseInt(worksheet.Cell(row, 7).GetString()),
             VariacaoTonalidade = worksheet.Cell(row, 8).GetString().Trim(),
             M2Caixa = ParseDecimal(worksheet.Cell(row, 11).GetString()),
-            Espessura = ParseDecimal(worksheet.Cell(row, 17).GetString())
+            Espessura = ParseDecimal(worksheet.Cell(row, 17).GetString()),
+            PesoBrutoM2 = ParseDecimal(worksheet.Cell(row, 15).GetString())
         };
     }
 

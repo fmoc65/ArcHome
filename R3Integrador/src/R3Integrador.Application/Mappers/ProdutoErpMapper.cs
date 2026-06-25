@@ -26,12 +26,11 @@ public static class ProdutoErpMapper
             Ncm = ObterNcm(produto),
             UfOrigem = "SP",
             
-            // Mapeamento correto dos preÃ§os nas colunas oficiais do ERP
             PrecoVenda = produto.PrecoVenda, 
             PrecoFabrica = produto.PrecoTabela,
             DescontoPercentual = CalcularDescontoPercentual(produto),
-            IpiPercentual = 0,
-            AliqIcmsOrigem = 18.00m,
+            IpiPercentual = ObterIpiPercentual(produto),
+            AliqIcmsOrigem = 12.00m,
             AliqIcmsInterna = 18.00m,
             Iva = 0,
             FreteReais = 0,
@@ -39,7 +38,7 @@ public static class ProdutoErpMapper
             Unidade = "M2",
             QtdeEmbalagemVenda = ObterM2PorCaixa(produto),
             
-            Cst = "060",
+            Cst = ObterCst(produto),
             AliquotaCofinsCst = "01",
             AliquotaIpiCst = "49",
             AliquotaPisCst = "01",
@@ -48,7 +47,7 @@ public static class ProdutoErpMapper
             CfopFora = "6404",
             
             PesoLiquido = 0,
-            PesoBruto = 0,
+            PesoBruto = produto.PesoBrutoM2,
             QtdeEmbalagemCompra = 1,
             ValorPi = 0,
             AliquotaCofins = 0,
@@ -56,7 +55,6 @@ public static class ProdutoErpMapper
             PercentualSt = 0,
             UnidFabril = "CX",
             
-            // Dica: Como o ERP nÃ£o tem coluna de "Espessura", guardamos essa informaÃ§Ã£o na ObservaÃ§Ã£o!
             Observacao = $"Importado via R3Integrador - Tabela {produto.TipoTabela} - Espessura: {produto.Espessura}mm",
             
             DiferencaIcms = 0,
@@ -66,14 +64,16 @@ public static class ProdutoErpMapper
             AliquotaIbs = ObterAliquotaIbs(produto),
             AliquotaCbs = ObterAliquotaCbs(produto),
             ClassificacaoTributaria = ObterClassificacaoTributaria(produto)
-            
-            // <-- AS LINHAS "PrecoFracionado = ..." E "Espessura = ..." FORAM REMOVIDAS DAQUI
-            // Pois elas nÃ£o existem no DTO de 60 colunas exigido pelo layout do ERP.
         };
     }
 
     private static string ObterNcm(ProdutoNormalizado produto)
     {
+        if (EhVinilico(produto))
+        {
+            return "39181000";
+        }
+
         if (!EhPorcelanato(produto))
         {
             return "0";
@@ -82,6 +82,32 @@ public static class ProdutoErpMapper
         return produto.Referencia.Equals("120003", StringComparison.OrdinalIgnoreCase)
             ? "69072200"
             : "69072100";
+    }
+
+    private static decimal ObterIpiPercentual(ProdutoNormalizado produto)
+    {
+        if (!EhPorcelanato(produto))
+        {
+            return 0;
+        }
+
+        var ncm = ObterNcm(produto);
+        return ncm.Equals("69072100", StringComparison.OrdinalIgnoreCase) ? 0.65m : 0;
+    }
+
+    private static string ObterCst(ProdutoNormalizado produto)
+    {
+        if (EhPorcelanato(produto) || EhVinilico(produto))
+        {
+            return "010";
+        }
+
+        return "060";
+    }
+
+    private static bool EhVinilico(ProdutoNormalizado produto)
+    {
+        return produto.Grupo.Equals("VINILICO", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ObterEnquadramentoIpi(ProdutoNormalizado produto)

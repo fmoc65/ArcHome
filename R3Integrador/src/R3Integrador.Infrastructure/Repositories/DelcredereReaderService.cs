@@ -69,6 +69,7 @@ public class DelcredereReaderService : IDelcredereReader
                     VariacaoTonalidade = estado.VariacaoTonalidade,
                     M2Caixa = estado.M2Caixa,
                     Espessura = estado.Espessura,
+                    PesoBrutoM2 = estado.PesoBrutoM2,
                     PrecoTabela = preco,
                     PrecoDesconto = preco,
                     PrecoVenda = CalcularPrecoVendaDelcredere(preco)
@@ -185,6 +186,7 @@ public class DelcredereReaderService : IDelcredereReader
         public string VariacaoTonalidade { get; private set; } = string.Empty;
         public decimal M2Caixa { get; private set; }
         public decimal Espessura { get; private set; }
+        public decimal PesoBrutoM2 { get; private set; }
 
         public void Atualizar(IXLWorksheet worksheet, int row)
         {
@@ -211,6 +213,12 @@ public class DelcredereReaderService : IDelcredereReader
             if (!string.IsNullOrWhiteSpace(espessura))
             {
                 Espessura = ParseDecimal(espessura);
+            }
+
+            var pesoBruto = worksheet.Cell(row, 15).GetString();
+            if (!string.IsNullOrWhiteSpace(pesoBruto))
+            {
+                PesoBrutoM2 = ParseDecimal(pesoBruto);
             }
         }
 
