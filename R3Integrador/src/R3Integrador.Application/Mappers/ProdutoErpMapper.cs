@@ -31,8 +31,8 @@ public static class ProdutoErpMapper
             DescontoPercentual = CalcularDescontoPercentual(produto),
             IpiPercentual = ObterIpiPercentual(produto),
             AliqIcmsOrigem = 12.00m,
-            AliqIcmsInterna = 18.00m,
-            Iva = 0,
+            AliqIcmsInterna = EhVinilico(produto) ? 12.00m : 18.00m,
+            Iva = EhVinilico(produto) ? 66.00m : 0,
             FreteReais = 0,
             FretePercentual = 0,
             Unidade = "M2",
@@ -52,7 +52,7 @@ public static class ProdutoErpMapper
             ValorPi = 0,
             AliquotaCofins = 0,
             AliquotaPis = 0,
-            PercentualSt = 0,
+            PercentualSt = EhVinilico(produto) ? 7.92m : 0,
             UnidFabril = "CX",
             
             Observacao = $"Importado via R3Integrador - Tabela {produto.TipoTabela} - Espessura: {produto.Espessura}mm",
@@ -63,7 +63,9 @@ public static class ProdutoErpMapper
             EnquadramentoIpi = ObterEnquadramentoIpi(produto),
             AliquotaIbs = ObterAliquotaIbs(produto),
             AliquotaCbs = ObterAliquotaCbs(produto),
-            ClassificacaoTributaria = ObterClassificacaoTributaria(produto)
+            ClassificacaoTributaria = ObterClassificacaoTributaria(produto),
+            AliquotaPisOrigem = EhVinilico(produto) ? "0,65" : string.Empty,
+            AliquotaCofinsOrigem = EhVinilico(produto) ? "3" : string.Empty
         };
     }
 

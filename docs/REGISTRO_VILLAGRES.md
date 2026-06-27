@@ -2,6 +2,9 @@
 
 > Gerado em: 25/06/2026
 > Contexto: Ajuste de campos fiscais com base em notas fiscais reais
+>
+> Atualizado em: 27/06/2026
+> Contexto: Correção de alíquotas específicas para Vinílico conforme feedback do cliente (Kaption AI)
 
 ---
 
@@ -13,6 +16,7 @@
 4. [Planilhas Geradas](#4-planilhas-geradas)
 5. [Regras de Negócio Consolidadas](#5-regras-de-negócio-consolidadas)
 6. [Validação dos Campos](#6-validação-dos-campos)
+7. [Correção de Alíquotas Vinílico (27/06/2026)](#7-correção-de-alíquotas-vinílico-27062026)
 
 ---
 
@@ -98,6 +102,11 @@ Adicionada propriedade `PesoBrutoM2` para capturar peso bruto/m² da planilha.
 | `ObterCst()` | Porcelanato/Vinílico → `010`; demais → `060` |
 | `AliqIcmsOrigem` | `12.00m` (antes `18.00m`) |
 | `AliqIcmsInterna` | `18.00m` (SP destino, mantido) |
+| `AliqIcmsInterna` (Vinílico) | `12.00m` (corrigido em 27/06) |
+| `Iva` (Vinílico) | `66.00m` (antes `0`) |
+| `PercentualSt` (Vinílico) | `7.92m` (antes `0`) |
+| `AliquotaPisOrigem` (Vinílico) | `"0,65"` (antes vazio) |
+| `AliquotaCofinsOrigem` (Vinílico) | `"3"` (antes vazio) |
 | `PesoBruto` | `produto.PesoBrutoM2` (antes `0`) |
 
 ### 3.4. Readers (ExcelReader, VinilicoReader, LastraReader, VillaArtReader, DelcredereReader)
@@ -132,10 +141,12 @@ if (!string.IsNullOrWhiteSpace(pesoBruto))
 - **Precificação:** Revenda (markup 75% + 10,51% impostos + frete R$ 1,50)
 
 ### 4.2. Tabela Vinílico (VINILICO)
-- **Arquivo:** `IMPORTACAO_ERP_VINILICO_20260625_192408.xlsx`
+- **Arquivo 25/06:** `IMPORTACAO_ERP_VINILICO_20260625_192408.xlsx`
+- **Arquivo 27/06 (corrigido):** `IMPORTACAO_ERP_VINILICO_20260627_134317.xlsx`
 - **Registros:** 16 produtos
 - **NCM:** 39181000
 - **SubGrupo:** CLICADO (prefixo SPC) / COLADO (prefixo LVT)
+- **Diferença:** Alíquotas fiscais ajustadas conforme dados do cliente (ver seção 7)
 
 ### 4.3. Tabela Lastra (LASTRA)
 - **Arquivo:** `IMPORTACAO_ERP_LASTRA_20260625_192408.xlsx`
@@ -172,7 +183,11 @@ if (!string.IsNullOrWhiteSpace(pesoBruto))
 | CST | 010 | 010 | 010 |
 | IPI% | 0,65 (NCM 69072100) / 0 (NCM 69072200) | 0 | 0,65 |
 | AliqIcmsOrigem | 12% | 12% | 12% |
-| AliqIcmsInterna | 18% | 18% | 18% |
+| AliqIcmsInterna | 18% | **12%** | 18% |
+| IVA | 0 | **66%** | 0 |
+| PercentualST | 0 | **7,92%** | 0 |
+| AliqPisOrigem | vazio | **0,65%** | vazio |
+| AliqCofinsOrigem | vazio | **3%** | vazio |
 | CFOP Dentro | 5405 | 5405 | 5405 |
 | CFOP Fora | 6404 | 6404 | 6404 |
 | NCM | 69072100 / 69072200 | 39181000 | 69072100 / 69072200 |
@@ -210,7 +225,7 @@ if (!string.IsNullOrWhiteSpace(pesoBruto))
 | NCM | `69072200` | ✅ (diferenciado) |
 | IPI% | `0` | ✅ (sem IPI p/ 69072200) |
 
-### Verificado no VINILICO:
+### Verificado no VINILICO (25/06):
 
 | Campo | Valor | Status |
 |---|---|---|
@@ -219,10 +234,60 @@ if (!string.IsNullOrWhiteSpace(pesoBruto))
 | SubGrupo LVT | `COLADO` | ✅ |
 | IPI% | `0` | ✅ (vinílico sem IPI) |
 
+### Verificado no VINILICO (27/06 - após correção):
+
+| Coluna | Campo | Valor | Status |
+|---|---|---|---|
+| 19 | AliqIcmsOrigem | `12` | ✅ |
+| 20 | AliqIcmsInterna | `12` | ✅ (corrigido de 18) |
+| 21 | IVA | `66` | ✅ (corrigido de 0) |
+| 39 | PercentualST | `7,92` | ✅ (corrigido de 0) |
+| 52 | AliqPisOrigem | `0,65` | ✅ (corrigido de vazio) |
+| 53 | AliqCofinsOrigem | `3` | ✅ (corrigido de vazio) |
+
+---
+
+## 7. Correção de Alíquotas Vinílico (27/06/2026)
+
+### Problema
+
+Cliente (Kaption AI) reportou que a tabela de importação dos vinílicos estava com `ALIQICMSINTERNA = 18%`, mas o valor correto informado anteriormente era `12%`. Aproveitou-se para preencher também os demais campos fiscais específicos dos vinílicos que estavam zerados/vazios.
+
+### Dados do Cliente (Vinílicos)
+
+| Parâmetro | Valor |
+|---|---|
+| IPI | 0% |
+| AliqIcmsOrigem | 12% |
+| AliqIcmsInterna | 12% |
+| IVA | 66% |
+| Percentual ST | 7,92% |
+| PIS Origem | 0,65% |
+| COFINS Origem | 3% |
+
+### Alterações no `ProdutoErpMapper.cs`
+
+Os campos passaram a ser condicionais por tipo de produto:
+
+```csharp
+AliqIcmsInterna = EhVinilico(produto) ? 12.00m : 18.00m,
+Iva = EhVinilico(produto) ? 66.00m : 0,
+PercentualSt = EhVinilico(produto) ? 7.92m : 0,
+AliquotaPisOrigem = EhVinilico(produto) ? "0,65" : string.Empty,
+AliquotaCofinsOrigem = EhVinilico(produto) ? "3" : string.Empty
+```
+
+### Planilha Gerada
+
+- **Arquivo:** `IMPORTACAO_ERP_VINILICO_20260627_134317.xlsx`
+- **Registros:** 16 produtos
+- **Status:** Todos os campos fiscais validados conforme acima
+
 ---
 
 ## Arquivos Modificados
 
+### 25/06/2026
 ```
 src/R3Integrador.Application/DTOs/ProdutoErpDto.cs
 src/R3Integrador.Application/DTOs/ProdutoNormalizado.cs
@@ -233,4 +298,9 @@ src/R3Integrador.Infrastructure/Repositories/LastraReaderService.cs
 src/R3Integrador.Infrastructure/Repositories/VillaArtReaderService.cs
 src/R3Integrador.Infrastructure/Repositories/DelcredereReaderService.cs
 src/R3Integrador.Console/appsettings.json
+```
+
+### 27/06/2026
+```
+src/R3Integrador.Application/Mappers/ProdutoErpMapper.cs
 ```
