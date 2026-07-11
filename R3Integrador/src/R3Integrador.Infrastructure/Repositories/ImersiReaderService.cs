@@ -8,7 +8,7 @@ namespace R3Integrador.Infrastructure.Repositories;
 
 public class ImersiReaderService : IImersiReader
 {
-    private const string NomeAba = "LISTA DE PREÇOS";
+    private static readonly string[] NomesAbas = { "LISTA DE PREÇOS", "IMPORTACAO_ERP" };
     private const string Marca = "IMERSI";
 
     private static readonly (string Nome, int Coluna)[] TabelasPreco =
@@ -24,10 +24,15 @@ public class ImersiReaderService : IImersiReader
         var produtosPorTabela = TabelasPreco.ToDictionary(tabela => tabela.Nome, _ => new List<ProdutoErpDto>());
         using var workbook = new XLWorkbook(caminhoArquivo);
 
-        if (!workbook.TryGetWorksheet(NomeAba, out var worksheet))
+        if (!TryObterWorksheet(workbook, out var worksheet, out var abaUtilizada))
         {
-            Console.WriteLine($"Aba {NomeAba} nao encontrada.");
+            Console.WriteLine($"Aba {NomesAbas[0]} nao encontrada.");
             return produtosPorTabela;
+        }
+
+        if (!string.IsNullOrWhiteSpace(abaUtilizada) && abaUtilizada != NomesAbas[0])
+        {
+            Console.WriteLine($"Aba {NomesAbas[0]} nao encontrada. Usando aba '{abaUtilizada}'.");
         }
 
         var ultimaLinha = worksheet.LastRowUsed()?.RowNumber() ?? 0;
@@ -60,6 +65,22 @@ public class ImersiReaderService : IImersiReader
         Console.WriteLine($"[OK] {produtosPorTabela.Sum(tabela => tabela.Value.Count)} registros Imersi processados com sucesso.");
 
         return await Task.FromResult(produtosPorTabela);
+    }
+
+    private static bool TryObterWorksheet(XLWorkbook workbook, out IXLWorksheet worksheet, out string abaUtilizada)
+    {
+        foreach (var nomeAba in NomesAbas)
+        {
+            if (workbook.TryGetWorksheet(nomeAba, out worksheet))
+            {
+                abaUtilizada = nomeAba;
+                return true;
+            }
+        }
+
+        worksheet = null!;
+        abaUtilizada = string.Empty;
+        return false;
     }
 
     private static ProdutoErpDto MapearProduto(
@@ -219,25 +240,7 @@ public class ImersiReaderService : IImersiReader
 
     private static decimal ParseDecimal(string valor)
     {
-        if (string.IsNullOrWhiteSpace(valor))
-        {
-            return 0;
-        }
-
-        valor = valor.Replace("R$", "")
-            .Replace("%", "")
-            .Replace(".", "")
-            .Replace(",", ".")
-            .Replace("-", "")
-            .Trim();
-
-        decimal.TryParse(
-            valor,
-            NumberStyles.Any,
-            CultureInfo.InvariantCulture,
-            out var resultado);
-
-        return resultado;
+        return DecimalParser.Parse(valor);
     }
 
     private sealed record TributacaoImersi(
@@ -246,5 +249,4 @@ public class ImersiReaderService : IImersiReader
         decimal MvaAjustada4,
         decimal MvaAjustada12);
 }
-
 

@@ -145,26 +145,7 @@ public class RubinettosReaderService : IRubinettosReader
 
     private static decimal ParseDecimal(string valor)
     {
-        if (string.IsNullOrWhiteSpace(valor))
-        {
-            return 0;
-        }
-
-        valor = valor.Replace("R$", "")
-            .Replace("%", "")
-            .Replace(".", "")
-            .Replace(",", ".")
-            .Replace("-", "")
-            .Trim();
-
-        decimal.TryParse(
-            valor,
-            NumberStyles.Any,
-            CultureInfo.InvariantCulture,
-            out var resultado);
-
-        return resultado;
+        return DecimalParser.Parse(valor);
     }
 }
-
 

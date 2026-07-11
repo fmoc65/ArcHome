@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 using R3Integrador.Application.DTOs;
 using R3Integrador.Application.Interfaces;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -21,9 +22,13 @@ public class DelcredereReaderService : IDelcredereReader
         ("DEL30", 23)
     ];
 
-    public async Task<List<ProdutoNormalizado>> LerAsync(string caminhoArquivo)
+    public async Task<List<ProdutoNormalizado>> LerAsync(string caminhoArquivo, string? caminhoAliquotas = null)
     {
         var produtos = new List<ProdutoNormalizado>();
+        var aliquotas = string.IsNullOrWhiteSpace(caminhoAliquotas)
+            ? null
+            : await CarregarAliquotasAsync(caminhoAliquotas);
+
         using var workbook = new XLWorkbook(caminhoArquivo);
 
         if (!workbook.TryGetWorksheet(NomeAba, out var worksheet))
@@ -50,8 +55,7 @@ public class DelcredereReaderService : IDelcredereReader
             foreach (var tabelaPreco in TabelasPreco)
             {
                 var preco = ParseDecimal(worksheet.Cell(row, tabelaPreco.Coluna).GetFormattedString());
-
-                produtos.Add(new ProdutoNormalizado
+                var produto = new ProdutoNormalizado
                 {
                     TipoTabela = NomeAba,
                     Formato = estado.Formato,
@@ -73,7 +77,17 @@ public class DelcredereReaderService : IDelcredereReader
                     PrecoTabela = preco,
                     PrecoDesconto = preco,
                     PrecoVenda = CalcularPrecoVendaDelcredere(preco)
-                });
+                };
+
+                if (aliquotas != null && aliquotas.TryGetValue(referencia, out var aliquota))
+                {
+                    produto.AliquotaIbs = aliquota.AliquotaIbs;
+                    produto.AliquotaCbs = aliquota.AliquotaCbs;
+                    produto.ClassificacaoTributaria = aliquota.ClassificacaoTributaria;
+                    produto.CodigoBeneficio = aliquota.CodigoBeneficio;
+                }
+
+                produtos.Add(produto);
             }
         }
 
@@ -81,6 +95,66 @@ public class DelcredereReaderService : IDelcredereReader
         Console.WriteLine($"[OK] {produtos.Count} registros Del Credere processados com sucesso.");
 
         return await Task.FromResult(produtos);
+    }
+
+    private static async Task<Dictionary<string, AliquotaLinha>> CarregarAliquotasAsync(string caminhoAliquotas)
+    {
+        var lookup = new Dictionary<string, AliquotaLinha>(StringComparer.OrdinalIgnoreCase);
+        using var workbook = new XLWorkbook(caminhoAliquotas);
+        var worksheet = workbook.Worksheets.FirstOrDefault() ?? workbook.Worksheet(1);
+        if (worksheet == null)
+        {
+            return lookup;
+        }
+
+        var headerCells = worksheet.Row(1).CellsUsed().ToDictionary(
+            c => RemoverAcentos(c.GetString()).Trim().ToUpperInvariant(),
+            c => c.Address.ColumnNumber);
+
+        var codigoFabricaCol = ObterColuna(headerCells, "CÓDIGO FÁBRICA", "CODIGO FABRICA", "B");
+        var aliquotaIbsCol = ObterColuna(headerCells, "ALIQUOTA IBS", "BE");
+        var aliquotaCbsCol = ObterColuna(headerCells, "ALIQUOTA CBS", "BF");
+        var classificacaoTributariaCol = ObterColuna(headerCells, "CLASSIFICACAO TRIBUTARIA", "BG");
+        var codigoBeneficioCol = ObterColuna(headerCells, "CODIGO BENEFICIO", "BH");
+
+        var ultimaLinha = worksheet.LastRowUsed()?.RowNumber() ?? 0;
+        for (var row = 2; row <= ultimaLinha; row++)
+        {
+            var codigo = worksheet.Cell(row, codigoFabricaCol).GetFormattedString().Trim();
+            if (string.IsNullOrWhiteSpace(codigo))
+            {
+                continue;
+            }
+
+            lookup[codigo] = new AliquotaLinha
+            {
+                AliquotaIbs = GetCellString(worksheet, row, aliquotaIbsCol),
+                AliquotaCbs = GetCellString(worksheet, row, aliquotaCbsCol),
+                ClassificacaoTributaria = GetCellString(worksheet, row, classificacaoTributariaCol),
+                CodigoBeneficio = GetCellString(worksheet, row, codigoBeneficioCol)
+            };
+        }
+
+        return await Task.FromResult(lookup);
+    }
+
+    private static string GetCellString(IXLWorksheet worksheet, int row, int column)
+    {
+        return column <= 0 ? string.Empty : worksheet.Cell(row, column).GetFormattedString().Trim();
+    }
+
+    private static int ObterColuna(Dictionary<string, int> headerCells, params string[] nomes)
+    {
+        foreach (var nome in nomes)
+        {
+            var chave = RemoverAcentos(nome).Trim().ToUpperInvariant();
+            if (headerCells.TryGetValue(chave, out var coluna))
+            {
+                return coluna;
+            }
+        }
+
+        return 0;
     }
 
     private static bool EhLinhaDeCabecalho(string referencia)
@@ -129,32 +203,7 @@ public class DelcredereReaderService : IDelcredereReader
 
     private static decimal ParseDecimal(string valor)
     {
-        if (string.IsNullOrWhiteSpace(valor))
-        {
-            return 0;
-        }
-
-        valor = valor.Replace("R$", "")
-            .Replace("-", "")
-            .Replace("%", "")
-            .Trim();
-
-        if (valor.Contains('.') && valor.Contains(','))
-        {
-            valor = valor.Replace(".", "").Replace(",", ".");
-        }
-        else if (valor.Contains(','))
-        {
-            valor = valor.Replace(",", ".");
-        }
-
-        decimal.TryParse(
-            valor,
-            NumberStyles.Any,
-            CultureInfo.InvariantCulture,
-            out var resultado);
-
-        return resultado;
+        return DecimalParser.Parse(valor);
     }
 
     private static int ParseInt(string valor)
@@ -227,5 +276,13 @@ public class DelcredereReaderService : IDelcredereReader
             valor = valor.Trim();
             return string.IsNullOrWhiteSpace(valor) ? valorAtual : valor;
         }
+    }
+
+    private sealed class AliquotaLinha
+    {
+        public string AliquotaIbs { get; init; } = string.Empty;
+        public string AliquotaCbs { get; init; } = string.Empty;
+        public string ClassificacaoTributaria { get; init; } = string.Empty;
+        public string CodigoBeneficio { get; init; } = string.Empty;
     }
 }

@@ -62,12 +62,12 @@ public class ImportacaoService
         _logger.LogInformation("Exportacao da tabela {Tabela} concluida com sucesso.", tabela);
     }
 
-    public async Task ProcessarDelcredereAsync(string caminhoArquivo)
+    public async Task ProcessarDelcredereAsync(string caminhoArquivo, string? caminhoAliquotas = null)
     {
         const string tabela = "COM DEL CREDERE";
         _logger.LogInformation("Iniciando importacao Del Credere. Arquivo={Arquivo}; Aba={Aba}", caminhoArquivo, tabela);
 
-        var produtosBrutos = await _delcredereReader.LerAsync(caminhoArquivo);
+        var produtosBrutos = await _delcredereReader.LerAsync(caminhoArquivo, caminhoAliquotas);
 
         if (!PossuiProdutos(produtosBrutos, tabela))
         {
@@ -92,11 +92,6 @@ public class ImportacaoService
             {
                 produto.Voltagem = string.Empty;
                 produto.Marca = ObterMarcaRepresentada(grupoTabelaMarca.Key.Marca, grupoTabelaMarca.Key.TabelaPreco);
-                produto.IpiPercentual = 0.65m;
-                produto.EnquadramentoIpi = "999";
-                produto.AliquotaIbs = "0,1";
-                produto.AliquotaCbs = "0,9";
-                produto.ClassificacaoTributaria = "000001";
             }
 
             RegistrarExportacao($"{tabela} {sufixoTabela} {produtosErp[0].Marca}", produtosErp.Count, arquivoSaida);

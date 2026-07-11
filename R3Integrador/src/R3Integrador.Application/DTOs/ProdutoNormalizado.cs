@@ -22,4 +22,10 @@ public class ProdutoNormalizado
     public decimal Espessura { get; set; }
     public decimal M2Caixa { get; set; }
     public decimal PesoBrutoM2 { get; set; }
+    public string AliquotaIbs { get; set; } = string.Empty;
+    public string AliquotaCbs { get; set; } = string.Empty;
+    public string ClassificacaoTributaria { get; set; } = string.Empty;
+    public string CodigoBeneficio { get; set; } = string.Empty;
+    public decimal? IpiPercentual { get; set; }
+    public string EnquadramentoIpi { get; set; } = string.Empty;
 }

@@ -4,5 +4,5 @@ namespace R3Integrador.Application.Interfaces;
 
 public interface IDelcredereReader
 {
-    Task<List<ProdutoNormalizado>> LerAsync(string caminhoArquivo);
+    Task<List<ProdutoNormalizado>> LerAsync(string caminhoArquivo, string? caminhoAliquotas = null);
 }

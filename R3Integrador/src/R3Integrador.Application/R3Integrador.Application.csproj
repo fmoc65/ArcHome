@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+    <BuildInParallel>false</BuildInParallel>
   </PropertyGroup>
 
   
@@ -28,7 +30,9 @@
   
 
   <ItemGroup>
-    <ProjectReference Include="..\R3Integrador.Core\R3Integrador.Core.csproj" />
+    <ProjectReference Include="..\R3Integrador.Core\R3Integrador.Core.csproj"
+                      SkipGetTargetFrameworkProperties="true"
+                      SetTargetFramework="TargetFramework=net10.0" />
   </ItemGroup>
 
 </Project>

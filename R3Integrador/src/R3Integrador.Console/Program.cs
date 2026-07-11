@@ -86,14 +86,20 @@ while (executando)
 
     switch (opcao)
     {
-        case "1": await ExecutarAcaoAsync(() => importacaoService.ProcessarPadraoAsync(ObterCaminho(), "VAREJO")); break;
-        case "2": await ExecutarAcaoAsync(() => importacaoService.ProcessarVinilicoAsync(ObterCaminho())); break;
-        case "3": await ExecutarAcaoAsync(() => importacaoService.ProcessarLastraAsync(ObterCaminho())); break;
-        case "4": await ExecutarAcaoAsync(() => importacaoService.ProcessarDelcredereAsync(ObterCaminho())); break;
-        case "5": await ExecutarAcaoAsync(() => importacaoService.ProcessarVillaArtAsync(ObterCaminho())); break;
-        case "6": await ExecutarAcaoAsync(() => importacaoService.ProcessarRubinettosAsync(ObterCaminho())); break;
-        case "7": await ExecutarAcaoAsync(() => importacaoService.ProcessarRocaAsync(ObterCaminho())); break;
-        case "8": await ExecutarAcaoAsync(() => importacaoService.ProcessarImersiAsync(ObterCaminho())); break;
+        case "1": await ExecutarAcaoAsync(() => importacaoService.ProcessarPadraoAsync(ObterCaminho("Digite ou arraste o arquivo Excel do Fornecedor:"), "VAREJO")); break;
+        case "2": await ExecutarAcaoAsync(() => importacaoService.ProcessarVinilicoAsync(ObterCaminho("Digite ou arraste o arquivo Excel do Fornecedor:"))); break;
+        case "3": await ExecutarAcaoAsync(() => importacaoService.ProcessarLastraAsync(ObterCaminho("Digite ou arraste o arquivo Excel do Fornecedor:"))); break;
+        case "4":
+        {
+            var caminhoTabela = ObterCaminho("Digite o caminho da planilha TABELA DELCREDERE VAREJO:");
+            var caminhoAliquotas = ObterCaminho("Digite o caminho da planilha IMPORTACAO_ERP_DELCREDERE_DEL20 (opcional):");
+            await ExecutarAcaoAsync(() => importacaoService.ProcessarDelcredereAsync(caminhoTabela, string.IsNullOrWhiteSpace(caminhoAliquotas) ? null : caminhoAliquotas));
+            break;
+        }
+        case "5": await ExecutarAcaoAsync(() => importacaoService.ProcessarVillaArtAsync(ObterCaminho("Digite ou arraste o arquivo Excel do Fornecedor:"))); break;
+        case "6": await ExecutarAcaoAsync(() => importacaoService.ProcessarRubinettosAsync(ObterCaminho("Digite ou arraste o arquivo Excel do Fornecedor:"))); break;
+        case "7": await ExecutarAcaoAsync(() => importacaoService.ProcessarRocaAsync(ObterCaminho("Digite ou arraste o arquivo Excel do Fornecedor:"))); break;
+        case "8": await ExecutarAcaoAsync(() => importacaoService.ProcessarImersiAsync(ObterCaminho("Digite ou arraste o arquivo Excel do Fornecedor:"))); break;
         case "0": executando = false; break;
         default: Console.WriteLine("Opção inválida."); break;
     }
@@ -105,9 +111,9 @@ while (executando)
     }
 }
 
-static string ObterCaminho()
+static string ObterCaminho(string prompt)
 {
-    Console.Write("\nDigite ou arraste o arquivo Excel do Fornecedor: ");
+    Console.Write($"\n{prompt} ");
     var caminho = Console.ReadLine() ?? string.Empty;
     return caminho.Trim('"');
 }

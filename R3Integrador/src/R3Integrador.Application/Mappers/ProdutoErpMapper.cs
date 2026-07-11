@@ -29,10 +29,10 @@ public static class ProdutoErpMapper
             PrecoVenda = produto.PrecoVenda, 
             PrecoFabrica = produto.PrecoTabela,
             DescontoPercentual = CalcularDescontoPercentual(produto),
-            IpiPercentual = ObterIpiPercentual(produto),
+            IpiPercentual = produto.IpiPercentual ?? ObterIpiPercentual(produto),
             AliqIcmsOrigem = 12.00m,
-            AliqIcmsInterna = EhVinilico(produto) ? 12.00m : 18.00m,
-            Iva = EhVinilico(produto) ? 66.00m : 0,
+            AliqIcmsInterna = ObterAliqIcmsInterna(produto),
+            Iva = ObterIva(produto),
             FreteReais = 0,
             FretePercentual = 0,
             Unidade = "M2",
@@ -52,7 +52,7 @@ public static class ProdutoErpMapper
             ValorPi = 0,
             AliquotaCofins = 0,
             AliquotaPis = 0,
-            PercentualSt = EhVinilico(produto) ? 7.92m : 0,
+            PercentualSt = ObterPercentualSt(produto),
             UnidFabril = "CX",
             
             Observacao = $"Importado via R3Integrador - Tabela {produto.TipoTabela} - Espessura: {produto.Espessura}mm",
@@ -60,13 +60,49 @@ public static class ProdutoErpMapper
             DiferencaIcms = 0,
             ReducaoBaseIcms = 0,
             ReducaoBaseSt = 0,
-            EnquadramentoIpi = ObterEnquadramentoIpi(produto),
-            AliquotaIbs = ObterAliquotaIbs(produto),
-            AliquotaCbs = ObterAliquotaCbs(produto),
-            ClassificacaoTributaria = ObterClassificacaoTributaria(produto),
-            AliquotaPisOrigem = EhVinilico(produto) ? "0,65" : string.Empty,
-            AliquotaCofinsOrigem = EhVinilico(produto) ? "3" : string.Empty
+            EnquadramentoIpi = !string.IsNullOrWhiteSpace(produto.EnquadramentoIpi) ? produto.EnquadramentoIpi : ObterEnquadramentoIpi(produto),
+            AliquotaIbs = !string.IsNullOrWhiteSpace(produto.AliquotaIbs) ? produto.AliquotaIbs : ObterAliquotaIbs(produto),
+            AliquotaCbs = !string.IsNullOrWhiteSpace(produto.AliquotaCbs) ? produto.AliquotaCbs : ObterAliquotaCbs(produto),
+            ClassificacaoTributaria = !string.IsNullOrWhiteSpace(produto.ClassificacaoTributaria) ? produto.ClassificacaoTributaria : ObterClassificacaoTributaria(produto),
+            CodigoBeneficio = produto.CodigoBeneficio,
+            AliquotaPisOrigem = ObterAliquotaPisOrigem(produto),
+            AliquotaCofinsOrigem = ObterAliquotaCofinsOrigem(produto)
         };
+    }
+
+    private static decimal ObterAliqIcmsInterna(ProdutoNormalizado produto)
+    {
+        return EhPorcelanato(produto) || EhVinilico(produto) ? 12.00m : 18.00m;
+    }
+
+    private static decimal ObterIva(ProdutoNormalizado produto)
+    {
+        if (EhVinilico(produto))
+        {
+            return 66.00m;
+        }
+
+        return EhPorcelanato(produto) ? 81.00m : 0;
+    }
+
+    private static decimal ObterPercentualSt(ProdutoNormalizado produto)
+    {
+        if (EhVinilico(produto))
+        {
+            return 7.92m;
+        }
+
+        return EhPorcelanato(produto) ? 9.86m : 0;
+    }
+
+    private static string ObterAliquotaPisOrigem(ProdutoNormalizado produto)
+    {
+        return EhPorcelanato(produto) || EhVinilico(produto) ? "0,65" : string.Empty;
+    }
+
+    private static string ObterAliquotaCofinsOrigem(ProdutoNormalizado produto)
+    {
+        return EhPorcelanato(produto) || EhVinilico(produto) ? "3" : string.Empty;
     }
 
     private static string ObterNcm(ProdutoNormalizado produto)
@@ -171,6 +207,5 @@ public static class ProdutoErpMapper
     }
 
 }
-
 
 
