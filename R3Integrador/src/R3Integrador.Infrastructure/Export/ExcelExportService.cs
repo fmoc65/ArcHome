@@ -86,6 +86,8 @@ public class ExcelExportService : IExcelExporter
             worksheet.Cell(linha, 59).Value = produto.ClassificacaoTributaria;
             worksheet.Cell(linha, 60).Value = produto.CodigoBeneficio;
 
+            AplicarSituacaoCamposFiscais(worksheet, linha, produto.SituacaoCamposFiscais);
+
             linha++;
         }
 
@@ -106,6 +108,41 @@ public class ExcelExportService : IExcelExporter
         Console.ResetColor();
 
         // Removido o Task.CompletedTask inútil que causava o falso positivo antes do término real
+    }
+
+    private static void AplicarSituacaoCamposFiscais(
+        IXLWorksheet worksheet,
+        int linha,
+        IReadOnlyDictionary<int, SituacaoCampoFiscal> situacoes)
+    {
+        foreach (var (coluna, situacao) in situacoes)
+        {
+            if (coluna is < 1 or > 60)
+            {
+                continue;
+            }
+
+            var celula = worksheet.Cell(linha, coluna);
+            var cabecalho = worksheet.Cell(1, coluna);
+
+            switch (situacao)
+            {
+                case SituacaoCampoFiscal.Confirmado:
+                    celula.Style.Fill.BackgroundColor = XLColor.FromHtml("#C6EFCE");
+                    celula.Style.Font.FontColor = XLColor.FromHtml("#006100");
+                    break;
+                case SituacaoCampoFiscal.Estimado:
+                    celula.Style.Fill.BackgroundColor = XLColor.FromHtml("#FFEB9C");
+                    celula.Style.Font.FontColor = XLColor.FromHtml("#9C6500");
+                    cabecalho.Style.Fill.BackgroundColor = XLColor.FromHtml("#BF9000");
+                    break;
+                case SituacaoCampoFiscal.Pendente:
+                    celula.Style.Fill.BackgroundColor = XLColor.FromHtml("#FFC7CE");
+                    celula.Style.Font.FontColor = XLColor.FromHtml("#9C0006");
+                    cabecalho.Style.Fill.BackgroundColor = XLColor.FromHtml("#C00000");
+                    break;
+            }
+        }
     }
 
     private static void CriarCabecalho(IXLWorksheet worksheet)

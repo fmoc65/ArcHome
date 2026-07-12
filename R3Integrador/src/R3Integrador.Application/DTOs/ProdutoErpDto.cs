@@ -2,6 +2,10 @@ namespace R3Integrador.Application.DTOs;
 
 public class ProdutoErpDto
 {
+    // Metadado de exportacao: permite aos readers indicar o grau de confianca
+    // dos campos fiscais sem alterar as 60 colunas posicionais do ERP.
+    public Dictionary<int, SituacaoCampoFiscal> SituacaoCamposFiscais { get; set; } = new();
+
     // Colunas 1 a 10
     public string CodigoInterno { get; set; } = string.Empty;       // Coluna 1
     public string CodigoFabrica { get; set; } = string.Empty;       // Coluna 2
@@ -73,4 +77,11 @@ public class ProdutoErpDto
     public string AliquotaCbs { get; set; } = string.Empty;         // Coluna 58
     public string ClassificacaoTributaria { get; set; } = string.Empty; // Coluna 59
     public string CodigoBeneficio { get; set; } = string.Empty;     // Coluna 60
+}
+
+public enum SituacaoCampoFiscal
+{
+    Confirmado,
+    Estimado,
+    Pendente
 }

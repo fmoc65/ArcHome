@@ -16,6 +16,8 @@ public class ImportacaoService
     private readonly IRubinettosReader _rubinettosReader;
     private readonly IRocaReader _rocaReader;
     private readonly IImersiReader _imersiReader;
+    private readonly IStudioMorandinReader _studioMorandinReader;
+    private readonly IInvitaReader _invitaReader;
     private readonly IExcelExporter _excelExporter;
     private readonly ILogger<ImportacaoService> _logger;
     private readonly string _pastaSaida;
@@ -34,6 +36,8 @@ public class ImportacaoService
         _rubinettosReader = readers.RubinettosReader;
         _rocaReader = readers.RocaReader;
         _imersiReader = readers.ImersiReader;
+        _studioMorandinReader = readers.StudioMorandinReader;
+        _invitaReader = readers.InvitaReader;
         _excelExporter = excelExporter;
         _logger = logger;
         _pastaSaida = configuration["Diretorios:PastaSaida"]
@@ -238,6 +242,46 @@ public class ImportacaoService
         }
 
         _logger.LogInformation("Processamento e exportacao Imersi concluidos com sucesso.");
+    }
+
+    public async Task ProcessarStudioMorandinAsync(string caminhoArquivo)
+    {
+        const string tabela = "STUDIO MORANDIN";
+        _logger.LogInformation("Iniciando importacao provisoria Studio Morandin. Arquivo={Arquivo}", caminhoArquivo);
+
+        var produtosErp = await _studioMorandinReader.LerAsync(caminhoArquivo);
+
+        if (!produtosErp.Any())
+        {
+            _logger.LogWarning("Nenhum produto valido encontrado na tabela {Tabela}.", tabela);
+            return;
+        }
+
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_STUDIO_MORANDIN_PROVISORIA_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
+        await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
+
+        _logger.LogWarning("Arquivo Studio Morandin gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
+    }
+
+    public async Task ProcessarInvitaAsync(string caminhoArquivo)
+    {
+        const string tabela = "INVITA";
+        _logger.LogInformation("Iniciando importacao provisoria Invita. Arquivo={Arquivo}", caminhoArquivo);
+
+        var produtosErp = await _invitaReader.LerAsync(caminhoArquivo);
+
+        if (!produtosErp.Any())
+        {
+            _logger.LogWarning("Nenhum produto valido encontrado na tabela {Tabela}.", tabela);
+            return;
+        }
+
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_INVITA_PROVISORIA_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
+        await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
+
+        _logger.LogWarning("Arquivo Invita gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
     }
 
     private bool PossuiProdutos(List<ProdutoNormalizado>? produtos, string tabela)

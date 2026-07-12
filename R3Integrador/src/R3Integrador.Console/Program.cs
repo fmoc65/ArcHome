@@ -30,6 +30,8 @@ builder.Services.AddSingleton<ILastraReader, LastraReaderService>();
 builder.Services.AddSingleton<IRubinettosReader, RubinettosReaderService>();
 builder.Services.AddSingleton<IRocaReader, RocaReaderService>();
 builder.Services.AddSingleton<IImersiReader, ImersiReaderService>();
+builder.Services.AddSingleton<IStudioMorandinReader, StudioMorandinReaderService>();
+builder.Services.AddSingleton<IInvitaReader, InvitaReaderService>();
 builder.Services.AddSingleton(sp => new ImportacaoReaderSet
 {
     ExcelReader = sp.GetRequiredService<IExcelReader>(),
@@ -39,7 +41,9 @@ builder.Services.AddSingleton(sp => new ImportacaoReaderSet
     LastraReader = sp.GetRequiredService<ILastraReader>(),
     RubinettosReader = sp.GetRequiredService<IRubinettosReader>(),
     RocaReader = sp.GetRequiredService<IRocaReader>(),
-    ImersiReader = sp.GetRequiredService<IImersiReader>()
+    ImersiReader = sp.GetRequiredService<IImersiReader>(),
+    StudioMorandinReader = sp.GetRequiredService<IStudioMorandinReader>(),
+    InvitaReader = sp.GetRequiredService<IInvitaReader>()
 });
 builder.Services.AddSingleton<ImportacaoService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExportService>();
@@ -75,6 +79,8 @@ while (executando)
     Console.WriteLine("    6 - Processar Planilha RUBINETTOS");
     Console.WriteLine("    7 - Processar Planilha ROCA");
     Console.WriteLine("    8 - Processar Planilha IMERSI");
+    Console.WriteLine("    9 - Processar Planilha STUDIO MORANDIN (PROVISORIA)");
+    Console.WriteLine("   10 - Processar Planilha INVITA (PROVISORIA)");
     Console.ForegroundColor = ConsoleColor.Red;
     Console.WriteLine("    0 - Sair");
     Console.ResetColor();
@@ -100,6 +106,8 @@ while (executando)
         case "6": await ExecutarAcaoAsync(() => importacaoService.ProcessarRubinettosAsync(ObterCaminho("Digite ou arraste o arquivo Excel do Fornecedor:"))); break;
         case "7": await ExecutarAcaoAsync(() => importacaoService.ProcessarRocaAsync(ObterCaminho("Digite ou arraste o arquivo Excel do Fornecedor:"))); break;
         case "8": await ExecutarAcaoAsync(() => importacaoService.ProcessarImersiAsync(ObterCaminho("Digite ou arraste o arquivo Excel do Fornecedor:"))); break;
+        case "9": await ExecutarAcaoAsync(() => importacaoService.ProcessarStudioMorandinAsync(ObterCaminho("Digite ou arraste a tabela STUDIO MORANDIN:"))); break;
+        case "10": await ExecutarAcaoAsync(() => importacaoService.ProcessarInvitaAsync(ObterCaminho("Digite ou arraste a tabela INVITA:"))); break;
         case "0": executando = false; break;
         default: Console.WriteLine("Opção inválida."); break;
     }

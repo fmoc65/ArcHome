@@ -448,3 +448,385 @@ Para novas tabelas de fornecedor:
 8. Classificar grupo/subgrupo/modelo.
 9. Validar NCM, CST, IPI, ICMS, IVA, ST, PIS/COFINS, IBS/CBS e classificacao tributaria.
 10. Gerar arquivo por marca/tabela e validar colunas criticas no Excel final.
+
+## Processamentos de 11/07/2026 - DROP, Imersi e Rubinettos
+
+Nesta rodada foram analisadas as planilhas em
+`/home/fernando/Projetos/Work/ARCHOME/Planilhas` e, inicialmente, as copias que ainda
+estavam em `/home/fernando/Documentos/ArcHome`. Os arquivos de importacao foram salvos
+em `R3Integrador/Saida`. Os arquivos de origem permaneceram intactos.
+
+Convencao visual adotada nas planilhas desta rodada:
+
+- Celulas fiscais com fundo verde: valor comprovado diretamente em XML de NF-e.
+- Celulas fiscais com fundo vermelho: valor ausente, provisorio ou que depende de
+  validacao/preenchimento pelo contador.
+- Dados fiscais existentes apenas na tabela comercial foram preservados, mas nao foram
+  tratados como evidencia equivalente a uma NF-e.
+
+### DROP - primeira planilha pendente
+
+Fonte comercial inicialmente usada:
+
+- `DROP_TABELA_DE_PREÇOS_FEVEREIRO_2026_COMPLETA.xlsx`.
+- Aba `LP`, linhas de produto a partir da linha 4.
+- A tabela possui referencia, descricao, cor, EAN, precos, dimensoes, pesos e uma
+  estimativa de ST para SP.
+- A propria origem informa que a ST e estimada e deve ser conferida com a contabilidade.
+
+Foi gerado o arquivo preliminar:
+
+- `IMPORTACAO_ERP_DROP_PENDENTE_TRIBUTACAO_20260711.xlsx`.
+- 71 produtos, marca unica `DROP`, 60 colunas e nenhum preco de venda zerado.
+- Os campos fiscais sem evidencia foram deixados em vermelho.
+
+### DROP - regeneracao com NF-e
+
+Fontes fiscais encontradas em `/home/fernando/Projetos/Work/ARCHOME/Planilhas/Drop`:
+
+- `NFe-739.xml`.
+- `NFe-755.xml`.
+
+Arquivo final desta etapa:
+
+- `IMPORTACAO_ERP_DROP_COM_DADOS_NFE_20260711.xlsx`.
+- 71 produtos, 60 colunas, marca unica `DROP` e nenhum preco zerado.
+- As referencias comprovadas pelas notas foram `DP8205`, `DP4201` e `DP4720P`.
+- Dados comprovados foram preenchidos em verde; os demais campos tributarios pendentes
+  permaneceram em vermelho.
+
+Tributacao comprovada nas NF-e DROP:
+
+| Referencia | NCM | CEST | Origem + CST ICMS | ICMS interestadual | IPI | CST IPI |
+|---|---|---|---|---:|---:|---|
+| `DP8205` | `84818019` | `1007900` | `100` (`origem 1` + `CST 00`) | `4%` | `0%` | `51` |
+| `DP4201` | `84818019` | `1007900` | `100` (`origem 1` + `CST 00`) | `4%` | `0%` | `51` |
+| `DP4720P` | `74182000` | `1006700` | `100` (`origem 1` + `CST 00`) | `4%` | `6,5%` | `50` |
+
+Valores comuns comprovados para os tres itens:
+
+- Enquadramento IPI `999`.
+- CST PIS `01` e aliquota PIS origem `0,65%`.
+- CST COFINS `01` e aliquota COFINS origem `3%`.
+- IBS `0,1%`, CBS `0,9%` e classificacao tributaria `000001`.
+- Emitente `DROP METAIS`, UF `SC`, regime normal (`CRT 3`).
+
+Pendencias DROP que nao podem ser fechadas apenas pelas notas de compra:
+
+- `ALIQICMSINTERNA` de SP.
+- IVA/MVA e percentual de ST definitivo.
+- CFOPs de venda dentro e fora do estado.
+- CSOSN, reducoes de base e codigo de beneficio quando aplicaveis.
+
+### Imersi - copia para validacao contabil
+
+Fonte disponivel:
+
+- `IMERSI_ERP_ATE_3X_20260613_142323.xlsx`, que ja estava no layout ERP e nao era uma
+  tabela comercial de origem.
+
+Arquivo de trabalho gerado:
+
+- `IMPORTACAO_ERP_IMERSI_ATE_3X_PENDENTE_TRIBUTACAO_20260711.xlsx`.
+- 74 produtos, 60 colunas, marca unica `IMERSI` e nenhum preco zerado.
+- NCM, CEST/MVA conhecidos e dados comerciais foram preservados.
+- Parametros fiscais provisórios ou ainda nao homologados foram destacados em vermelho.
+
+### Rubinettos/Kromma
+
+Fonte comercial:
+
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/Rubinetto2025.xlsx`.
+- Aba `SP- Geral Abril 2025`.
+- Cabecalho na linha 4 e produtos a partir da linha 5.
+- 11.946 linhas validas e 11.892 referencias de NF distintas.
+- Existem 54 referencias repetidas; elas foram mantidas porque correspondem a produtos
+  ou variacoes diferentes. A chave recomendada no ERP continua sendo
+  `Referencia + Descricao`.
+- Nenhum produto possuia preco sugerido zerado.
+
+A tabela comercial ja fornece, por linha:
+
+- Referencia de NF, descricao, cor, linha, marca, EAN, unidade, dimensoes e pesos.
+- Preco sugerido e diferentes precos comerciais.
+- Codigo de origem, IPI, ICMS interestadual, MVA, ICMS interno, percentual de ST, NCM e
+  CEST.
+
+NF-e usadas, localizadas em
+`/home/fernando/Projetos/Work/ARCHOME/Planilhas/Rubinettos`:
+
+- `NFe-63938.xml`.
+- `NFe-64439.xml` e sua copia `NFe-64439 (1).xml`.
+- `NFe-64440.xml`.
+- `NFe-65663.xml` e sua copia `NFe-65663 (1).xml`.
+- As copias repetidas foram deduplicadas logicamente por numero da nota e referencia.
+
+As notas comprovam 13 referencias distintas. Campos comprovados diretamente foram
+marcados em verde. Regras observadas:
+
+- Emitente `RUBINETTOS EXCLUSIVE DESIGN`, UF `RS`, `CRT 3`.
+- A maior parte dos itens possui origem `5`, CST ICMS `10`, formando codigo completo
+  `510`, ICMS interestadual `12%` e CFOP de entrada `6401`.
+- A referencia `RB2027[4473]` possui origem `5`, CST `00`, codigo completo `500`, ICMS
+  `12%` e CFOP de entrada `6107`.
+- PIS: CST `01`, aliquota `0,65%`.
+- COFINS: CST `01`, aliquota `3%`.
+- IBS `0,1%`, CBS `0,9%` e classificacao tributaria `000001`.
+- Enquadramento IPI `999` foi aproveitado quando presente nas notas.
+- A maior parte dos metais das notas usa NCM `84818019`, CEST `1007900` e IPI nao
+  tributado/CST `51`.
+- `CUBACE21` usa NCM `73239300`, CEST `1005900`, IPI `6,5%` e CST IPI `50`.
+- `CUB2001` usa NCM `73241000` e CEST `1006000`.
+
+Marcas encontradas na origem antes da normalizacao:
+
+- `RUBINETTOS`: 7.828 linhas.
+- `RUBINETTOS COMERCIO`: 417 linhas, consolidadas como `RUBINETTOS`.
+- `KROMMA`: 3.430 linhas.
+- `RUBINETTOS/KROMMA`: 271 linhas cuja origem nao define uma marca unica.
+
+Foram gerados tres arquivos porque o ERP nao aceita varias marcas no mesmo arquivo:
+
+- `IMPORTACAO_ERP_RUBINETTOS_RUBINETTOS_COM_DADOS_NFE_20260711.xlsx`:
+  8.245 produtos e 10 referencias comprovadas pelas NF-e.
+- `IMPORTACAO_ERP_RUBINETTOS_KROMMA_COM_DADOS_NFE_20260711.xlsx`:
+  3.430 produtos e 1 referencia comprovada pelas NF-e.
+- `IMPORTACAO_ERP_RUBINETTOS_RUBINETTOS_KROMMA_COM_DADOS_NFE_20260711.xlsx`:
+  271 produtos e 2 referencias comprovadas pelas NF-e.
+
+Todos os arquivos possuem layout ERP de 60 colunas e passaram na verificacao de
+integridade do formato XLSX. Os dados comerciais e a tributacao existente na tabela
+foram preservados. Nos produtos presentes nas NF-e, os dados comprovados substituem ou
+confirmam os valores da origem e aparecem em verde.
+
+Pendencias Rubinettos/Kromma:
+
+- Definir a marca individual dos 271 itens classificados como `RUBINETTOS/KROMMA` antes
+  da importacao definitiva. O arquivo conjunto e apenas uma separacao fiel ao valor da
+  origem.
+- Validar CST, CFOPs de venda, PIS/COFINS, IBS/CBS e classificacao para os produtos que
+  nao aparecem nas NF-e.
+- Nao reutilizar automaticamente o CFOP de entrada das notas como CFOP de venda do ERP.
+- Confirmar com o contador os campos em vermelho, incluindo CSOSN, reducoes de base,
+  retencoes e codigo de beneficio quando aplicaveis.
+
+## Tratamento Studio Morandin - 12/07/2026
+
+Nova origem analisada:
+
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/TABELA STUDIO MORANDIN_ABR_26.xlsx`.
+- Aba unica `Plan1`, com cabecalho na linha 3, produtos a partir da linha 5 e observacao
+  fiscal no rodape.
+- 91 produtos, 91 referencias distintas, nenhuma duplicidade e nenhum preco de revenda
+  vazio ou zerado.
+- 88 produtos possuem unidade `m²`; 3 produtos possuem unidade `PÇ` e foram preservados
+  como `PC`, sem conversao forcada para `M2`.
+- O NCM `6907.23.00` aparece apenas na observacao geral da linha 107 e foi aplicado aos
+  91 produtos como informacao declarada pela origem.
+
+Arquivo tratado gerado, ainda nao considerado importacao ERP final:
+
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/TRATADA_STUDIO_MORANDIN_ABR_26_20260712.xlsx`.
+- Aba `PRODUTOS_TRATADOS`: 91 linhas e 30 colunas normalizadas.
+- Aba `CRITERIOS_E_PENDENCIAS`: explica as premissas, riscos e proximos passos.
+- O preco de revenda foi convertido para numero, mas ainda e necessario confirmar se ele
+  representa custo de fabrica ou preco final de venda para o ERP.
+- A coluna de linha comercial foi propagada para as linhas em que a origem usava celulas
+  vazias como continuacao visual.
+- Metragem por caixa, pecas por m², peso, pecas por caixa, medida e espessura foram
+  convertidos em campos estruturados.
+
+Tratamento fiscal adotado:
+
+- NCM normalizado: `69072300`.
+- Descricao: ladrilhos/placas de ceramica para pavimentacao ou revestimento, com absorcao
+  de agua superior a 10%.
+- CEST `1003000` e sujeicao a ST em SP foram classificados como regras condicionais:
+  aplicam-se se os produtos forem efetivamente ladrilhos ou placas exclusivamente para
+  pavimentacao/revestimento.
+- IVA-ST de SP `81%` foi registrado como premissa baseada no item 24 da Portaria SRE
+  88/2025, sujeito a validacao na operacao concreta.
+- ICMS interno `18%`, IPI `0%` e CFOP SP `5405` foram mantidos em amarelo como premissas
+  do cenario informado, nao como dados comprovados pela planilha ou NF-e.
+- CST IPI `53` nao foi aplicado automaticamente: aliquota IPI zero e saida nao tributada
+  sao enquadramentos diferentes.
+- Origem `0 Nacional` nao foi aplicada, pois origem da mercadoria nao pode ser inferida
+  pelo NCM.
+- CST ICMS, CSOSN, percentual efetivo de ST, origem, CST IPI, PIS e COFINS ficaram em
+  vermelho para confirmacao do contador.
+
+Convencao visual:
+
+- Amarelo: regra condicional ao cenario tributario informado.
+- Vermelho: campo ausente ou sem comprovacao, dependente de contador, XML ou NF-e.
+
+Proximos passos antes da importacao ERP:
+
+1. Confirmar formalmente o regime tributario da Arc Home.
+2. Confirmar com o fornecedor a origem das mercadorias.
+3. Validar com o contador CST IPI, CST/CSOSN de ICMS, PIS/COFINS e percentual efetivo
+   de ST para permitir o cadastro inicial sem NF-e.
+4. Definir se `PRECO REVENDA` e custo de fabrica ou preco final e qual formula comercial
+   deve ser aplicada.
+5. Somente depois gerar o arquivo final no layout ERP de 60 colunas.
+6. Revisar a parametrizacao fiscal quando for recebida a primeira NF-e real de compra.
+
+### Modelo comercial Studio Morandin
+
+Esclarecimento recebido em 12/07/2026:
+
+- A Arc Home ainda nao adquiriu produtos Studio Morandin e, por isso, nao existe XML de
+  NF-e de entrada disponivel neste momento.
+- O fluxo comercial e de venda antecipada: primeiro ocorre a venda ao cliente e depois a
+  Arc Home realiza a aquisicao correspondente junto ao fornecedor.
+- A operacao trabalha com estoque minimo, sem formacao relevante de estoque previo.
+- A ausencia atual de XML nao bloqueia o tratamento comercial da tabela, mas impede usar
+  uma nota real como evidencia da tributacao de entrada.
+- O cadastro inicial deve ser tratado como parametrizacao fiscal provisoria homologada
+  pelo contador, com revisao obrigatoria apos a primeira compra e recebimento do XML.
+- No ERP, `ESTOQUE MINIMO` nao deve ser preenchido automaticamente com uma quantidade
+  positiva sem definicao do cliente. Usar `0` ou deixar vazio ate a politica operacional
+  ser confirmada.
+
+### Reader Studio Morandin no R3Integrador
+
+Implementado em 12/07/2026 para tornar o processamento reproduzivel:
+
+- Interface `IStudioMorandinReader` em `R3Integrador.Application/Interfaces`.
+- Implementacao `StudioMorandinReaderService` em
+  `R3Integrador.Infrastructure/Repositories`.
+- Reader registrado no container de injecao, no `ImportacaoReaderSet` e no
+  `ImportacaoService`.
+- Opcao `9 - Processar Planilha STUDIO MORANDIN (PROVISORIA)` adicionada ao menu.
+- O fluxo gera arquivos com nome
+  `IMPORTACAO_ERP_STUDIO_MORANDIN_PROVISORIA_yyyyMMdd_HHmmss.xlsx` para impedir que a
+  saida atual seja confundida com importacao definitiva.
+
+Comportamento atual do reader:
+
+- Le a aba `Plan1` a partir da linha 5.
+- Propaga a linha comercial quando a origem usa celula vazia como continuacao.
+- Normaliza unidade `m²` como `M2` e preserva itens vendidos por peca como `PC`.
+- Usa metragem por caixa como embalagem de venda dos produtos em `M2`.
+- Le peso da caixa, medida, espessura, pecas por m², pecas por caixa e preco de revenda.
+- Preserva `PRECO REVENDA` provisoriamente em `PRECO VENDA` e `PRECO FABRICA`, sem
+  markup, ate a regra comercial ser confirmada.
+- Usa NCM `69072300`, IPI `0`, ICMS interno `18` e IVA `81` como premissas atuais.
+- Mantem origem, CST/CSOSN, CFOP, percentual efetivo de ST, PIS/COFINS e IBS/CBS vazios
+  ate homologacao.
+- Estoque minimo e maximo ficam em `0`, coerentes com o modelo de venda antecipada e
+  aquisicao posterior.
+
+Validacao executada:
+
+- Build completo de `R3Integrador.slnx` com `-m:1`: sem warnings e sem erros.
+- Fluxo real executado com a tabela Studio Morandin: 91 produtos processados.
+- Arquivo de teste gerado:
+  `IMPORTACAO_ERP_STUDIO_MORANDIN_PROVISORIA_20260712_133559.xlsx`.
+- O arquivo provisorio nao deve ser importado antes da homologacao fiscal e comercial.
+
+### Regra global de cores fiscais
+
+Definida em 12/07/2026 para todas as novas planilhas e readers:
+
+- Verde (`#C6EFCE`): dado fiscal confirmado por fonte confiavel, como XML/NF-e, ou
+  declarado expressamente na tabela de origem.
+- Amarelo (`#FFEB9C`): estimativa, premissa ou regra condicional ainda sujeita a
+  homologacao.
+- Vermelho (`#FFC7CE`): campo fiscal ausente ou pendente de contador/evidencia.
+
+A regra foi incorporada ao codigo:
+
+- `ProdutoErpDto` possui o metadado `SituacaoCamposFiscais`, sem alterar as 60 colunas
+  posicionais do ERP.
+- `ExcelExportService` aplica automaticamente as cores declaradas por cada reader.
+- Novos readers devem classificar explicitamente os campos como `Confirmado`, `Estimado`
+  ou `Pendente`.
+- O reader Studio Morandin foi o primeiro a usar a regra global: NCM verde; IPI, ICMS
+  interno e IVA amarelos; demais campos fiscais sem evidencia em vermelho.
+- Arquivo validado com a nova formatacao:
+  `IMPORTACAO_ERP_STUDIO_MORANDIN_PROVISORIA_20260712_134103.xlsx`, com 91 produtos e
+  60 colunas.
+
+## Tratamento Invita - 12/07/2026
+
+Origem analisada:
+
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/TabeladePrecosINVITACNPJICMS-18% ABR2026.xlsx`.
+- O nome correto da marca e `INVITA`; a solicitacao inicial mencionava Invicta.
+- Aba `CNPJ`, cabecalho na linha 91 e produtos a partir da linha 92.
+- Tabela vigente originalmente de 15/04/2026 a 10/05/2026; portanto esta vencida na data
+  do tratamento.
+- A origem declara fornecedor nacional, centro de distribuicao em Paulinia/SP, ICMS de
+  18% e precos com IPI, ICMS e substituicao tributaria inclusos.
+- 49 linhas de produto, 48 produtos unicos. A linha `KITFILTRO`, EAN
+  `7898593939646`, aparece duas vezes e foi deduplicada por `Codigo + EAN`.
+- Todos os 48 produtos possuem EAN e precos positivos.
+
+NCMs encontrados:
+
+- `84146000`: 9 coifas.
+- `85167100`: 2 cafeteiras.
+- `73211100`: 5 churrasqueiras/cooktops/fornos a gas.
+- `85166000`: 6 cooktops/fornos/fogao eletricos.
+- `85165000`: 1 micro-ondas; nao constava no levantamento fiscal inicial.
+- `84181000`: 4 refrigeradores.
+- `84186999`: 17 adegas, beer centers e maquinas de gelo.
+- `73239300`: 1 espatula de aluminio para pizza.
+- `84212100`: 1 kit filtro de agua apos deduplicacao.
+- `84501200`: 1 lava e seca.
+- `84221100`: 1 lava-loucas; nao constava no levantamento fiscal inicial.
+
+Ponto critico de classificacao:
+
+- O item `I-PA-FPZ-12-XX-NMHA` esta descrito como `ESPATULA EM ALUMINIO`, mas usa NCM
+  `73239300`, cuja descricao se refere a artefatos de aco inoxidavel. Exigir confirmacao
+  do fornecedor/contador antes da importacao.
+
+Reader implementado:
+
+- Interface `IInvitaReader`.
+- Implementacao `InvitaReaderService`.
+- Registrado no `ImportacaoReaderSet`, injecao de dependencia e `ImportacaoService`.
+- Opcao `10 - Processar Planilha INVITA (PROVISORIA)` adicionada ao menu.
+- Le precos numericos diretamente das celulas para preservar valores com separador de
+  milhar.
+- Usa `Preco Sugerido com Desconto` como preco de venda provisório e `Preco Lojista com
+  Impostos` como preco de fabrica/custo provisório.
+- Preserva NCM, EAN, familia, descricao, voltagem, desconto, IPI, ICMS, PIS e COFINS da
+  origem.
+- Estoques minimo/maximo ficam zerados.
+
+Arquivo gerado e validado:
+
+- `IMPORTACAO_ERP_INVITA_PROVISORIA_20260712_135746.xlsx`.
+- 48 produtos, 60 colunas, estrutura XLSX integra.
+- Verde: NCM, IPI, ICMS origem/interno e PIS/COFINS origem declarados por produto na
+  tabela.
+- Vermelho: IVA, CST/CSOSN, CFOP, percentual ST, enquadramento IPI, IBS/CBS,
+  classificacao tributaria e codigo de beneficio.
+
+Alerta temporal de ICMS-ST em SP:
+
+- A Portaria SRE 34/2026 foi publicada em 30/06/2026, mas entra em vigor apenas em
+  `01/10/2026`.
+- Em 12/07/2026 nao e correto tratar automaticamente refrigeradores e demais produtos
+  atingidos como ja excluidos da ST.
+- A situacao deve ser parametrizada conforme a data da operacao: regra vigente ate
+  30/09/2026 e nova regra a partir de 01/10/2026.
+- A noticia do Governo de SP confirma a exclusao futura, nao uma exclusao ja vigente.
+
+Necessario para o contador fechar a Invita:
+
+1. Confirmar o regime tributario da Arc Home e se devem ser usados CST ou CSOSN.
+2. Definir, por NCM + descricao, a sujeicao a ST ate 30/09/2026 e a partir de 01/10/2026.
+3. Informar CEST, IVA/MVA e percentual efetivo de ST dos itens ainda sujeitos.
+4. Definir CST/CSOSN e CFOP de venda dentro/fora de SP para itens com e sem ST.
+5. Confirmar CST IPI e enquadramento IPI para as diferentes aliquotas da origem.
+6. Homologar PIS/COFINS da tabela (`1,65%`/`7,60%`) para o cadastro da Arc Home.
+7. Informar IBS, CBS, classificacao tributaria e codigo de beneficio.
+8. Corrigir ou confirmar o NCM `73239300` da espatula descrita como aluminio.
+9. Validar especificamente o kit filtro `84212100` pela descricao e finalidade, evitando
+   enquadrar ST somente pelo NCM.
+10. Confirmar se os precos usados pelo reader correspondem corretamente a custo e venda
+    no modelo comercial da Arc Home.
