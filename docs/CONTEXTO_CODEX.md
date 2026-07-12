@@ -897,3 +897,39 @@ Necessario para o contador/fornecedor fechar a Derosso:
 8. Informar IBS, CBS, classificacao tributaria e codigo de beneficio.
 9. Confirmar a regra comercial da representacao: se o preco unitario deve ser copiado
    diretamente para venda e fabrica ou se existe comissao/fator adicional.
+
+### Derosso Revenda
+
+Nova origem recebida em 12/07/2026:
+
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/TABELA_DE_PRECOS_DEROSSO_REVENDA_01_05.xlsx`.
+- Aba `DEROSSO_REVENDA_01.05.26`.
+- 142 produtos e SKUs unicos, sem precos zerados.
+- 78 produtos em `M2` e 64 em `PC`.
+- Todos usam NCM `69041000` na origem.
+- O catalogo de revenda e menor que o de representacao: nao contem os tres itens em
+  `KG` e possui 27 produtos a menos.
+- Os precos sao diferentes da representacao e nao podem ser misturados.
+
+O `DerossoReaderService` foi adaptado para identificar automaticamente `REVENDA` ou
+`REPRESENTACAO` pelo nome da aba/titulo. Os arquivos futuros passam a incluir o tipo:
+
+- `IMPORTACAO_ERP_DEROSSO_REVENDA_PROVISORIA_*.xlsx`.
+- `IMPORTACAO_ERP_DEROSSO_REPRESENTACAO_PROVISORIA_*.xlsx`.
+
+Arquivo de revenda gerado e validado:
+
+- `IMPORTACAO_ERP_DEROSSO_REVENDA_PROVISORIA_20260712_141938.xlsx`.
+- 142 produtos e 60 colunas, sem erro de integridade.
+- NCM verde; ICMS interno `12%` e ST `0%` amarelos; demais campos fiscais pendentes em
+  vermelho.
+- O preco unitario da origem foi preservado provisoriamente em `PRECO FABRICA` e
+  `PRECO VENDA`. A planilha nao deve ser importada ate a margem/markup da revenda ser
+  definida.
+
+Pendencia comercial adicional para a revenda:
+
+- Confirmar se `PRECO UNITARIO DE VENDA` representa o custo de aquisicao da Arc Home.
+- Definir markup/margem, frete e demais componentes para calcular o preco final ao
+  consumidor.
+- Nao aplicar automaticamente a regra comercial da representacao aos itens de revenda.

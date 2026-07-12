@@ -14,6 +14,7 @@ public sealed class DerossoReaderService : IDerossoReader
         var produtos = new List<ProdutoErpDto>();
         using var workbook = new XLWorkbook(caminhoArquivo);
         var worksheet = workbook.Worksheet(1);
+        var tipoTabela = ObterTipoTabela(worksheet.Name, worksheet.Cell(1, 1).GetString());
         var ultimaLinha = worksheet.LastRowUsed()?.RowNumber() ?? 0;
 
         for (var row = 4; row <= ultimaLinha; row++)
@@ -45,8 +46,9 @@ public sealed class DerossoReaderService : IDerossoReader
                 Cor = cor,
                 Ncm = ncm,
                 UfOrigem = string.Empty,
-                // Tabela de representacao comissionada: preserva o preco unitario
-                // informado, sem markup, ate confirmacao da regra comercial.
+                // Preserva o preco unitario da origem nas duas colunas. Para revenda,
+                // a margem/markup ainda precisa ser homologada; para representacao,
+                // confirmar se o preco deve ser copiado diretamente.
                 PrecoVenda = preco,
                 PrecoFabrica = preco,
                 AliqIcmsInterna = 12,
@@ -58,13 +60,13 @@ public sealed class DerossoReaderService : IDerossoReader
                 UnidFabril = unidade,
                 EstoqueMinimo = 0,
                 EstoqueMaximo = 0,
-                Observacao = CriarObservacao(worksheet, row),
+                Observacao = CriarObservacao(worksheet, row, tipoTabela),
                 SituacaoCamposFiscais = CriarSituacaoCamposFiscais()
             });
         }
 
         Console.WriteLine();
-        Console.WriteLine($"[OK] {produtos.Count} produtos Derosso processados.");
+        Console.WriteLine($"[OK] {produtos.Count} produtos Derosso {tipoTabela} processados.");
         Console.WriteLine("[ATENCAO] ICMS 12% e ausencia de ST sao premissas; demais campos fiscais aguardam contador.");
 
         return Task.FromResult(produtos);
@@ -97,7 +99,7 @@ public sealed class DerossoReaderService : IDerossoReader
         };
     }
 
-    private static string CriarObservacao(IXLWorksheet worksheet, int row)
+    private static string CriarObservacao(IXLWorksheet worksheet, int row, string tipoTabela)
     {
         var embalagem = NormalizarTexto(worksheet.Cell(row, 9).GetString());
         var pecasEmbalagem = worksheet.Cell(row, 10).GetFormattedString().Trim();
@@ -105,7 +107,18 @@ public sealed class DerossoReaderService : IDerossoReader
         var pecasParede = worksheet.Cell(row, 14).GetFormattedString().Trim();
         var pecasPiso = worksheet.Cell(row, 15).GetFormattedString().Trim();
 
-        return $"Derosso representacao 01/05/2026 - {embalagem}, {pecasEmbalagem} pecas, embalagem {dimensaoEmbalagem} - Pecas/m2 parede: {pecasParede} - Pecas/m2 piso: {pecasPiso} - CEST 1002700/ST revogados em SP desde 01/01/2026 - confirmar NCM, acabamento, ICMS e tributacao com contador";
+        var pendenciaPreco = tipoTabela == "REVENDA"
+            ? "regra de margem/markup da revenda pendente"
+            : "regra comercial da representacao pendente";
+        return $"Derosso {tipoTabela} 01/05/2026 - {embalagem}, {pecasEmbalagem} pecas, embalagem {dimensaoEmbalagem} - Pecas/m2 parede: {pecasParede} - Pecas/m2 piso: {pecasPiso} - CEST 1002700/ST revogados em SP desde 01/01/2026 - {pendenciaPreco} - confirmar NCM, acabamento, ICMS e tributacao com contador";
+    }
+
+    private static string ObterTipoTabela(string nomeAba, string titulo)
+    {
+        var identificacao = $"{nomeAba} {titulo}";
+        return identificacao.Contains("REVENDA", StringComparison.OrdinalIgnoreCase)
+            ? "REVENDA"
+            : "REPRESENTACAO";
     }
 
     private static decimal CalcularEmbalagemVenda(string unidade, decimal embalagensPorM2)

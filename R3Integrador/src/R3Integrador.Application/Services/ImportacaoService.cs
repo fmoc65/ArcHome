@@ -289,7 +289,10 @@ public class ImportacaoService
     public async Task ProcessarDerossoAsync(string caminhoArquivo)
     {
         const string tabela = "DEROSSO";
-        _logger.LogInformation("Iniciando importacao provisoria Derosso. Arquivo={Arquivo}", caminhoArquivo);
+        var tipoTabela = Path.GetFileNameWithoutExtension(caminhoArquivo).Contains("REVENDA", StringComparison.OrdinalIgnoreCase)
+            ? "REVENDA"
+            : "REPRESENTACAO";
+        _logger.LogInformation("Iniciando importacao provisoria Derosso {Tipo}. Arquivo={Arquivo}", tipoTabela, caminhoArquivo);
         var produtosErp = await _derossoReader.LerAsync(caminhoArquivo);
 
         if (!produtosErp.Any())
@@ -298,8 +301,8 @@ public class ImportacaoService
             return;
         }
 
-        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_DEROSSO_PROVISORIA_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
-        RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_DEROSSO_{tipoTabela}_PROVISORIA_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        RegistrarExportacao($"{tabela} {tipoTabela}", produtosErp.Count, arquivoSaida);
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
         _logger.LogWarning("Arquivo Derosso gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
     }
