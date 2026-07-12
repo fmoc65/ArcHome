@@ -32,6 +32,7 @@ builder.Services.AddSingleton<IRocaReader, RocaReaderService>();
 builder.Services.AddSingleton<IImersiReader, ImersiReaderService>();
 builder.Services.AddSingleton<IStudioMorandinReader, StudioMorandinReaderService>();
 builder.Services.AddSingleton<IInvitaReader, InvitaReaderService>();
+builder.Services.AddSingleton<IDerossoReader, DerossoReaderService>();
 builder.Services.AddSingleton(sp => new ImportacaoReaderSet
 {
     ExcelReader = sp.GetRequiredService<IExcelReader>(),
@@ -43,7 +44,8 @@ builder.Services.AddSingleton(sp => new ImportacaoReaderSet
     RocaReader = sp.GetRequiredService<IRocaReader>(),
     ImersiReader = sp.GetRequiredService<IImersiReader>(),
     StudioMorandinReader = sp.GetRequiredService<IStudioMorandinReader>(),
-    InvitaReader = sp.GetRequiredService<IInvitaReader>()
+    InvitaReader = sp.GetRequiredService<IInvitaReader>(),
+    DerossoReader = sp.GetRequiredService<IDerossoReader>()
 });
 builder.Services.AddSingleton<ImportacaoService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExportService>();
@@ -81,6 +83,7 @@ while (executando)
     Console.WriteLine("    8 - Processar Planilha IMERSI");
     Console.WriteLine("    9 - Processar Planilha STUDIO MORANDIN (PROVISORIA)");
     Console.WriteLine("   10 - Processar Planilha INVITA (PROVISORIA)");
+    Console.WriteLine("   11 - Processar Planilha DEROSSO (PROVISORIA)");
     Console.ForegroundColor = ConsoleColor.Red;
     Console.WriteLine("    0 - Sair");
     Console.ResetColor();
@@ -108,6 +111,7 @@ while (executando)
         case "8": await ExecutarAcaoAsync(() => importacaoService.ProcessarImersiAsync(ObterCaminho("Digite ou arraste o arquivo Excel do Fornecedor:"))); break;
         case "9": await ExecutarAcaoAsync(() => importacaoService.ProcessarStudioMorandinAsync(ObterCaminho("Digite ou arraste a tabela STUDIO MORANDIN:"))); break;
         case "10": await ExecutarAcaoAsync(() => importacaoService.ProcessarInvitaAsync(ObterCaminho("Digite ou arraste a tabela INVITA:"))); break;
+        case "11": await ExecutarAcaoAsync(() => importacaoService.ProcessarDerossoAsync(ObterCaminho("Digite ou arraste a tabela DEROSSO:"))); break;
         case "0": executando = false; break;
         default: Console.WriteLine("Opção inválida."); break;
     }

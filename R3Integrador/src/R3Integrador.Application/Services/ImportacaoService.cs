@@ -18,6 +18,7 @@ public class ImportacaoService
     private readonly IImersiReader _imersiReader;
     private readonly IStudioMorandinReader _studioMorandinReader;
     private readonly IInvitaReader _invitaReader;
+    private readonly IDerossoReader _derossoReader;
     private readonly IExcelExporter _excelExporter;
     private readonly ILogger<ImportacaoService> _logger;
     private readonly string _pastaSaida;
@@ -38,6 +39,7 @@ public class ImportacaoService
         _imersiReader = readers.ImersiReader;
         _studioMorandinReader = readers.StudioMorandinReader;
         _invitaReader = readers.InvitaReader;
+        _derossoReader = readers.DerossoReader;
         _excelExporter = excelExporter;
         _logger = logger;
         _pastaSaida = configuration["Diretorios:PastaSaida"]
@@ -282,6 +284,24 @@ public class ImportacaoService
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
 
         _logger.LogWarning("Arquivo Invita gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
+    }
+
+    public async Task ProcessarDerossoAsync(string caminhoArquivo)
+    {
+        const string tabela = "DEROSSO";
+        _logger.LogInformation("Iniciando importacao provisoria Derosso. Arquivo={Arquivo}", caminhoArquivo);
+        var produtosErp = await _derossoReader.LerAsync(caminhoArquivo);
+
+        if (!produtosErp.Any())
+        {
+            _logger.LogWarning("Nenhum produto valido encontrado na tabela {Tabela}.", tabela);
+            return;
+        }
+
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_DEROSSO_PROVISORIA_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
+        await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
+        _logger.LogWarning("Arquivo Derosso gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
     }
 
     private bool PossuiProdutos(List<ProdutoNormalizado>? produtos, string tabela)

@@ -830,3 +830,70 @@ Necessario para o contador fechar a Invita:
    enquadrar ST somente pelo NCM.
 10. Confirmar se os precos usados pelo reader correspondem corretamente a custo e venda
     no modelo comercial da Arc Home.
+
+## Tratamento Derosso - 12/07/2026
+
+Origem:
+
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/TABELADEPREÇOSDEROSSO_REPRESENTAÇÃO_01_05.xlsx`.
+- Aba `DEROSSO_REPRESENTAÇÃO_01.05.26`.
+- Tabela de precos praticados para representacao comissionada, vigente a partir de
+  01/05/2026.
+- 169 produtos, 169 SKUs distintos e nenhum preco zerado.
+- Unidades: 90 produtos em `M2`, 76 em `PC` e 3 em `KG`.
+- Todos os produtos possuem NCM `69041000` declarado pela origem.
+- A origem nao fornece EAN, UF/origem da mercadoria, IPI, ICMS, PIS/COFINS, CST/CSOSN,
+  CFOP, CEST, IVA/MVA, IBS/CBS ou classificacao tributaria.
+
+Dados comerciais aproveitados:
+
+- Produto, cor, SKU, unidade, preco unitario, preco por peca, dimensoes, embalagem,
+  quantidade por embalagem, peso, dimensoes da embalagem e consumo por m².
+- Para produtos vendidos em `M2`, a embalagem de venda e calculada como
+  `1 / quantidade de embalagens por m²`.
+- Para produtos em `PC` ou `KG`, a embalagem de venda fica em `1`.
+- Por ser tabela de representacao comissionada, o preco unitario foi preservado
+  provisoriamente em `PRECO VENDA` e `PRECO FABRICA`, sem markup.
+
+Reader implementado:
+
+- Interface `IDerossoReader`.
+- Implementacao `DerossoReaderService`.
+- Registrado no `ImportacaoReaderSet`, injecao de dependencia e `ImportacaoService`.
+- Opcao `11 - Processar Planilha DEROSSO (PROVISORIA)` adicionada ao menu.
+
+Tratamento fiscal e cores:
+
+- NCM `69041000`: verde, pois consta em todas as linhas da origem.
+- ICMS interno `12%`: amarelo. A legislacao paulista preve tratamento de 12% para
+  tijolos ceramicos nao esmaltados nem vitrificados, mas e necessario confirmar que
+  todos os produtos Derosso atendem a essa descricao.
+- Percentual ST `0`: amarelo. O item da Portaria CAT 68/2019 para posicao `6904`, CEST
+  historico `1002700`, foi revogado a partir de 01/01/2026 pela Portaria SRE 64/2025.
+- IPI, ICMS origem, IVA, CST/CSOSN, CFOP, enquadramento IPI, PIS/COFINS, IBS/CBS,
+  classificacao tributaria e beneficio: vermelho.
+- O NCM unico precisa ser confirmado especialmente para garrafeiras, suportes,
+  elementos 3D e seixos soltos; nao se deve concluir a classificacao apenas por serem
+  ceramicos.
+
+Arquivo gerado e validado:
+
+- `IMPORTACAO_ERP_DEROSSO_PROVISORIA_20260712_141208.xlsx`.
+- 169 produtos e 60 colunas.
+- Integridade XLSX validada e build completo sem warnings/erros.
+
+Necessario para o contador/fornecedor fechar a Derosso:
+
+1. Confirmar NCM `69041000` por familia, principalmente garrafeiras, suportes,
+   elementos 3D e seixos.
+2. Confirmar que os produtos sao ceramicos nao esmaltados/nem vitrificados para aplicar
+   ICMS interno de 12%.
+3. Confirmar formalmente a ausencia de ST em SP e se algum item recebe outro CEST pela
+   descricao/finalidade.
+4. Informar UF e origem fiscal da mercadoria.
+5. Informar IPI, CST IPI e enquadramento IPI.
+6. Definir CST/CSOSN e CFOP dentro/fora de SP para o regime da Arc Home.
+7. Informar PIS/COFINS de origem aplicaveis.
+8. Informar IBS, CBS, classificacao tributaria e codigo de beneficio.
+9. Confirmar a regra comercial da representacao: se o preco unitario deve ser copiado
+   diretamente para venda e fabrica ou se existe comissao/fator adicional.
