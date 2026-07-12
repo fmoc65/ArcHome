@@ -19,6 +19,7 @@ public class ImportacaoService
     private readonly IStudioMorandinReader _studioMorandinReader;
     private readonly IInvitaReader _invitaReader;
     private readonly IDerossoReader _derossoReader;
+    private readonly IAtlasReader _atlasReader;
     private readonly IExcelExporter _excelExporter;
     private readonly ILogger<ImportacaoService> _logger;
     private readonly string _pastaSaida;
@@ -40,6 +41,7 @@ public class ImportacaoService
         _studioMorandinReader = readers.StudioMorandinReader;
         _invitaReader = readers.InvitaReader;
         _derossoReader = readers.DerossoReader;
+        _atlasReader = readers.AtlasReader;
         _excelExporter = excelExporter;
         _logger = logger;
         _pastaSaida = configuration["Diretorios:PastaSaida"]
@@ -305,6 +307,24 @@ public class ImportacaoService
         RegistrarExportacao($"{tabela} {tipoTabela}", produtosErp.Count, arquivoSaida);
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
         _logger.LogWarning("Arquivo Derosso gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
+    }
+
+    public async Task ProcessarAtlasAsync(string caminhoArquivo)
+    {
+        const string tabela = "ATLAS REVENDA 35";
+        _logger.LogInformation("Iniciando importacao provisoria Atlas. Arquivo={Arquivo}", caminhoArquivo);
+        var produtosErp = await _atlasReader.LerAsync(caminhoArquivo);
+
+        if (!produtosErp.Any())
+        {
+            _logger.LogWarning("Nenhum produto valido encontrado na tabela {Tabela}.", tabela);
+            return;
+        }
+
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_ATLAS_REVENDA_35_PROVISORIA_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
+        await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
+        _logger.LogWarning("Arquivo Atlas gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
     }
 
     private bool PossuiProdutos(List<ProdutoNormalizado>? produtos, string tabela)

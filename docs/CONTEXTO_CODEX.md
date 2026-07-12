@@ -933,3 +933,72 @@ Pendencia comercial adicional para a revenda:
 - Definir markup/margem, frete e demais componentes para calcular o preco final ao
   consumidor.
 - Nao aplicar automaticamente a regra comercial da representacao aos itens de revenda.
+
+## Tratamento Atlas Revenda 35% - 12/07/2026
+
+Origem:
+
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/TABELA ATLAS REVENDA 35% - MAIO 2026.xlsx`.
+- Arquivo exportado do Numbers com quatro abas: `Resumo da Exportação`, `Plan1`, `Plan2`
+  e `Plan3`.
+- `Resumo da Exportação` contem apenas metadados da conversao.
+- `Plan2` e `Plan3` estao realmente vazias.
+- Todos os produtos e regras fiscais estao em `Plan1`.
+
+Estrutura identificada:
+
+- 194 produtos regulares com referencia e EAN.
+- 9 registros adicionais de cantoneiras/cantos sem EAN, usando o tipo como referencia.
+- Total exportado: 203 produtos, todos com preco positivo.
+- 150 referencias textuais distintas nos produtos regulares; referencias repetidas
+  representam formatos/categorias diferentes e possuem EANs distintos.
+- Manter chave ERP `Referencia + Descricao`; a descricao gerada inclui secao, cor e
+  formato para diferenciar as variacoes.
+
+Regras fiscais declaradas por secao na origem:
+
+- NCM `69073000`: 110 produtos; IPI `0,65%`; ST informada como isenta/zero.
+- NCM `69072200`: 72 produtos; IPI `0,65%`; percentual ST `9,86%`.
+- NCM `69072100`: 12 produtos; IPI `0,65%`; percentual ST `9,86%`.
+- NCM `69074000`: 9 cantoneiras/cantos; IPI `0,65%`; ST informada como isenta/zero.
+- Para NCMs `69072100` e `69072200`, IVA `81%` foi incluído em amarelo como estimativa
+  baseada na regra paulista de revestimentos ceramicos.
+- Para `69073000` e `69074000`, IVA ficou pendente/vermelho; ST isenta nao foi tratada
+  automaticamente como IVA cadastral zero.
+
+Reader implementado:
+
+- Interface `IAtlasReader`.
+- Implementacao `AtlasReaderService`.
+- Le apenas `Plan1` e ignora de forma segura as abas vazias/metadados.
+- Herda NCM, IPI e ST do cabecalho fiscal ativo de cada bloco.
+- Trata o layout regular e o layout alternativo de cantoneiras/cantos.
+- Registrado no `ImportacaoReaderSet`, injecao de dependencia e `ImportacaoService`.
+- Opcao `12 - Processar Planilha ATLAS REVENDA 35% (PROVISORIA)` adicionada ao menu.
+
+Arquivo gerado e validado:
+
+- `IMPORTACAO_ERP_ATLAS_REVENDA_35_PROVISORIA_20260712_143227.xlsx`.
+- 203 produtos, 60 colunas, marca unica `ATLAS`, nenhum preco zerado e integridade XLSX
+  validada.
+- Verde: NCM, IPI e percentual ST informados pela origem.
+- Amarelo: IVA `81%` estimado nos grupos com ST `9,86%`.
+- Vermelho: ICMS origem/interno, CST/CSOSN, CFOP, enquadramento IPI, PIS/COFINS,
+  IBS/CBS, classificacao tributaria e demais pendencias.
+
+Necessario para o contador/cliente fechar a Atlas:
+
+1. Confirmar CEST por NCM e descricao: especialmente diferenciar revestimentos,
+   pastilhas/mosaicos e cantoneiras/cantos.
+2. Homologar se `69073000` e `69074000` estao realmente sem ST em SP em cada descricao.
+3. Confirmar se `9,86%` e o percentual efetivo de ST esperado pelo ERP e homologar IVA
+   `81%` para `69072100`/`69072200`.
+4. Informar UF/origem da mercadoria e ICMS origem/interno.
+5. Definir CST/CSOSN e CFOP dentro/fora de SP.
+6. Confirmar CST IPI e enquadramento IPI para a aliquota `0,65%`.
+7. Informar PIS/COFINS de origem.
+8. Informar IBS, CBS, classificacao tributaria e codigo de beneficio.
+9. Confirmar codigos/EANs e desdobramento por cor dos 9 itens de cantoneiras/cantos que
+   aparecem de forma agregada na origem.
+10. Confirmar se os precos publicados ja incorporam o desconto de 35% e se representam
+    custo da Arc Home ou preco final; definir markup/frete antes da importacao definitiva.
