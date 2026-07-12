@@ -20,6 +20,7 @@ public class ImportacaoService
     private readonly IInvitaReader _invitaReader;
     private readonly IDerossoReader _derossoReader;
     private readonly IAtlasReader _atlasReader;
+    private readonly INinaMartinelliReader _ninaMartinelliReader;
     private readonly IExcelExporter _excelExporter;
     private readonly ILogger<ImportacaoService> _logger;
     private readonly string _pastaSaida;
@@ -42,6 +43,7 @@ public class ImportacaoService
         _invitaReader = readers.InvitaReader;
         _derossoReader = readers.DerossoReader;
         _atlasReader = readers.AtlasReader;
+        _ninaMartinelliReader = readers.NinaMartinelliReader;
         _excelExporter = excelExporter;
         _logger = logger;
         _pastaSaida = configuration["Diretorios:PastaSaida"]
@@ -325,6 +327,24 @@ public class ImportacaoService
         RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
         _logger.LogWarning("Arquivo Atlas gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
+    }
+
+    public async Task ProcessarNinaMartinelliAsync(string caminhoArquivo)
+    {
+        const string tabela = "NINA MARTINELLI";
+        _logger.LogInformation("Iniciando importacao provisoria Nina Martinelli. Arquivo={Arquivo}", caminhoArquivo);
+        var produtosErp = await _ninaMartinelliReader.LerAsync(caminhoArquivo);
+
+        if (!produtosErp.Any())
+        {
+            _logger.LogWarning("Nenhum produto valido encontrado na tabela {Tabela}.", tabela);
+            return;
+        }
+
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_NINA_MARTINELLI_PROVISORIA_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
+        await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
+        _logger.LogWarning("Arquivo Nina Martinelli gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
     }
 
     private bool PossuiProdutos(List<ProdutoNormalizado>? produtos, string tabela)

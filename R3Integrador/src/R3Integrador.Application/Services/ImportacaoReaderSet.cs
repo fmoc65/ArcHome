@@ -16,4 +16,5 @@ public sealed class ImportacaoReaderSet
     public required IInvitaReader InvitaReader { get; init; }
     public required IDerossoReader DerossoReader { get; init; }
     public required IAtlasReader AtlasReader { get; init; }
+    public required INinaMartinelliReader NinaMartinelliReader { get; init; }
 }

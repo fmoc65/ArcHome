@@ -1002,3 +1002,52 @@ Necessario para o contador/cliente fechar a Atlas:
    aparecem de forma agregada na origem.
 10. Confirmar se os precos publicados ja incorporam o desconto de 35% e se representam
     custo da Arc Home ou preco final; definir markup/frete antes da importacao definitiva.
+
+## Conversao Nina Martinelli - 12/07/2026
+
+Arquivo recebido:
+
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/TABELA-PRECO-NINA-MARTINELLI_2026-Representação-REV02.numbers`.
+- `.numbers` e o formato proprietario de planilha do Apple Numbers.
+- O arquivo possui 14 MB, cerca de 200 blocos internos de tabelas `.iwa` e mais de mil
+  imagens de produtos; por isso aplicativos sem suporte ao Numbers podem exibir apenas
+  as imagens/previas.
+- LibreOffice nao conseguiu converter o arquivo diretamente.
+
+Foi usado temporariamente o pacote `numbers-parser` para ler os blocos estruturados do
+Numbers. O pacote foi instalado somente em `/tmp`, sem dependencia adicionada ao
+R3Integrador.
+
+Folhas encontradas:
+
+- `Indice`: sem produtos relevantes.
+- `Coleção Completa`: 1.141 linhas ativas e 1.138 codigos distintos; quatro bordas
+  especiais compartilham o texto `depende do raio` como codigo.
+- `Valores`: planilha auxiliar com formulas/erros de calculo.
+- `Lançamentos`: 224 produtos, todos ja contidos em `Coleção Completa`; nao devem ser
+  duplicados.
+- `Politica Comercial`: regras de representacao.
+- `Descontinuados`: 68 produtos, excluidos da conversao ativa.
+
+Distribuicao da colecao ativa:
+
+- 736 produtos em `m²`.
+- 396 produtos em `pç`.
+- 9 produtos em `L (litro)`.
+- Todos informam UF `SP` e possuem preco de representacao positivo.
+- A origem nao possui EAN ou campos fiscais/NCM visiveis na tabela principal analisada.
+
+Arquivo XLSX estruturado gerado:
+
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/CONVERTIDA_NINA_MARTINELLI_2026_REPRESENTACAO_REV02.xlsx`.
+- Aba `COLECAO_COMPLETA`, com 1.141 produtos e os 22 campos comerciais recuperados.
+- Imagens nao foram incorporadas na copia estruturada; os dados comerciais foram
+  priorizados para permitir tratamento e criacao futura do reader.
+
+Proximos passos:
+
+1. Definir referencias tecnicas unicas para as quatro bordas com codigo `depende do raio`.
+2. Mapear grupo/subgrupo e normalizar unidades/embalagens.
+3. Obter NCM e tributacao por familia com fornecedor/contador.
+4. Criar `NinaMartinelliReaderService` sobre o XLSX convertido.
+5. Gerar planilha ERP provisoria com campos fiscais em vermelho.

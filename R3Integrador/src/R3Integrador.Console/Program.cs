@@ -34,6 +34,7 @@ builder.Services.AddSingleton<IStudioMorandinReader, StudioMorandinReaderService
 builder.Services.AddSingleton<IInvitaReader, InvitaReaderService>();
 builder.Services.AddSingleton<IDerossoReader, DerossoReaderService>();
 builder.Services.AddSingleton<IAtlasReader, AtlasReaderService>();
+builder.Services.AddSingleton<INinaMartinelliReader, NinaMartinelliReaderService>();
 builder.Services.AddSingleton(sp => new ImportacaoReaderSet
 {
     ExcelReader = sp.GetRequiredService<IExcelReader>(),
@@ -47,7 +48,8 @@ builder.Services.AddSingleton(sp => new ImportacaoReaderSet
     StudioMorandinReader = sp.GetRequiredService<IStudioMorandinReader>(),
     InvitaReader = sp.GetRequiredService<IInvitaReader>(),
     DerossoReader = sp.GetRequiredService<IDerossoReader>(),
-    AtlasReader = sp.GetRequiredService<IAtlasReader>()
+    AtlasReader = sp.GetRequiredService<IAtlasReader>(),
+    NinaMartinelliReader = sp.GetRequiredService<INinaMartinelliReader>()
 });
 builder.Services.AddSingleton<ImportacaoService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExportService>();
@@ -87,6 +89,7 @@ while (executando)
     Console.WriteLine("   10 - Processar Planilha INVITA (PROVISORIA)");
     Console.WriteLine("   11 - Processar Planilha DEROSSO (PROVISORIA)");
     Console.WriteLine("   12 - Processar Planilha ATLAS REVENDA 35% (PROVISORIA)");
+    Console.WriteLine("   13 - Processar Planilha NINA MARTINELLI (PROVISORIA)");
     Console.ForegroundColor = ConsoleColor.Red;
     Console.WriteLine("    0 - Sair");
     Console.ResetColor();
@@ -116,6 +119,7 @@ while (executando)
         case "10": await ExecutarAcaoAsync(() => importacaoService.ProcessarInvitaAsync(ObterCaminho("Digite ou arraste a tabela INVITA:"))); break;
         case "11": await ExecutarAcaoAsync(() => importacaoService.ProcessarDerossoAsync(ObterCaminho("Digite ou arraste a tabela DEROSSO:"))); break;
         case "12": await ExecutarAcaoAsync(() => importacaoService.ProcessarAtlasAsync(ObterCaminho("Digite ou arraste a tabela ATLAS:"))); break;
+        case "13": await ExecutarAcaoAsync(() => importacaoService.ProcessarNinaMartinelliAsync(ObterCaminho("Digite ou arraste a tabela NINA MARTINELLI convertida para XLSX:"))); break;
         case "0": executando = false; break;
         default: Console.WriteLine("Opção inválida."); break;
     }
