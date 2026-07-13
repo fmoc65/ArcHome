@@ -1044,10 +1044,86 @@ Arquivo XLSX estruturado gerado:
 - Imagens nao foram incorporadas na copia estruturada; os dados comerciais foram
   priorizados para permitir tratamento e criacao futura do reader.
 
-Proximos passos:
+Integracao concluida em 12/07/2026:
 
-1. Definir referencias tecnicas unicas para as quatro bordas com codigo `depende do raio`.
-2. Mapear grupo/subgrupo e normalizar unidades/embalagens.
-3. Obter NCM e tributacao por familia com fornecedor/contador.
-4. Criar `NinaMartinelliReaderService` sobre o XLSX convertido.
-5. Gerar planilha ERP provisoria com campos fiscais em vermelho.
+- Criados `NinaMartinelliReaderService` e a opcao 13 do console.
+- Gerado `IMPORTACAO_ERP_NINA_MARTINELLI_PROVISORIA_20260712_195722.xlsx`, com 1.141
+  produtos e 60 colunas.
+- As quatro bordas cujo codigo na origem e `depende do raio` receberam referencias
+  tecnicas unicas; unidades foram normalizadas para `M2`, `PC` e `LT`.
+- O preco de representacao foi preservado provisoriamente em preco de fabrica e venda,
+  sem markup. NCM e todos os campos fiscais sem evidencia ficaram em vermelho.
+
+## Tratamento Tabela 2026 Especial SL (PDF) - 12/07/2026
+
+Origem:
+
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/Tabela 2026 - Especial - SL.pdf`.
+- PDF de tres paginas, exportado de uma tabela de precos com vigencia janeiro/2026.
+- O titulo interno identifica a origem como `Tabela - Vinicius - 2026.xlsx`; a marca
+  foi mantida provisoriamente como `SL`, conforme o nome recebido do arquivo.
+
+Dados aproveitados:
+
+- Foram extraidos 216 itens com codigo, descricao, linha/colecao, formato e preco FOB
+  Tatuí. Revestimentos foram classificados como `M2`; cantoneiras, como `PC`.
+- O PDF declara expressamente `Sem IPI / Sem ST / Sem DIFAL` nos precos publicados.
+- Para codigos repetidos em blocos comerciais diferentes, foi criada referencia tecnica
+  unica para evitar colisao no ERP.
+
+Arquivo gerado:
+
+- `IMPORTACAO_ERP_SL_ESPECIAL_PROVISORIA_20260712_200000.xlsx`.
+- 216 produtos, 60 colunas e integridade XLSX validada.
+- Preco FOB foi preservado provisoriamente em `PRECO FABRICA` e `PRECO VENDA`, sem
+  margem, frete ou outros componentes comerciais.
+- NCM, EAN, embalagem, peso, ICMS, CST/CSOSN, CFOP, CEST, IVA/MVA, PIS/COFINS,
+  enquadramento IPI e IBS/CBS ficaram pendentes/vermelhos, pois nao aparecem no PDF.
+
+Reader integrado em 12/07/2026:
+
+- Interface `ISpecialSlReader` e implementacao `SpecialSlReaderService` adicionadas ao
+  projeto. O reader usa `pdftohtml` (pacote `poppler-utils`) para reconstruir os dados
+  posicionais do PDF.
+- Registrado no container, `ImportacaoReaderSet` e `ImportacaoService`; opcao
+  `14 - Processar PDF TABELA ESPECIAL SL (PROVISORIA)` incluida no console.
+- Fluxo validado gerando 216 produtos em
+  `IMPORTACAO_ERP_SL_ESPECIAL_PROVISORIA_20260712_205747.xlsx`.
+
+## Consolidado para contador - planilhas de 10, 11 e 12/07/2026
+
+Regra metodologica usada:
+
+- Dados comerciais foram transcritos das fontes e notas/XML foram tratados como
+  evidencia primaria por item.
+- Quando a origem ou XML informava NCM, ele foi usado para pesquisar bases publicas e
+  legislacao aplicavel e formular premissas fiscais iniciais. NCM isolado nao foi usado
+  para concluir CST, CFOP, CEST, ST, origem, PIS/COFINS ou os campos IBS/CBS.
+- Verde significa dado comprovado pela fonte; amarelo, premissa/regra condicional;
+  vermelho, campo sem evidencia e dependente de homologacao contabil.
+
+Arquivos e pendencias principais:
+
+- **10/07 — ROCA/CELITE:** dois arquivos, separados por marca, com NCM, EAN, preco,
+  CST 060, CFOP 5405/6404 e ICMS interno 18% vindos da origem. Confirmar PIS/COFINS,
+  IBS/CBS/classificacao tributaria e regra fiscal final por operacao.
+- **10/07 — Delcredere Villagres/Villa Art:** 12 arquivos (DEL5 a DEL30, uma marca por
+  arquivo), com formula comercial aplicada e premissas de porcelanato. Confirmar
+  PIS 0,65%/COFINS 3%, IPI quando houver divergencia com a orientacao comercial e os
+  campos da reforma tributaria.
+- **11/07 — DROP:** considerar a versao `COM_DADOS_NFE`; tres referencias foram
+  comprovadas por XML. Confirmar para todo o catalogo ICMS interno SP, IVA/MVA/ST,
+  CFOP de venda, CSOSN, reducoes e beneficio fiscal.
+- **11/07 — Imersi:** copia de trabalho de 74 itens, pois a fonte ja estava no layout
+  ERP; NCM, CEST/MVA e dados comerciais foram preservados. Confirmar tributacao por
+  produto antes de qualquer importacao definitiva.
+- **11/07 — Rubinettos/Kromma:** tres arquivos por marca; dados de 13 referencias
+  foram confrontados com XML. Definir a marca dos 271 itens mistos e homologar os
+  campos fiscais dos demais itens, sem reutilizar CFOP de entrada como CFOP de venda.
+- **12/07 — Studio Morandin, Invita, Derosso (representacao e revenda), Atlas, Nina
+  Martinelli e SL Especial:** todos sao arquivos provisórios. As premissas e perguntas
+  especificas constam nas secoes de cada fornecedor acima; o ponto comum e homologar
+  tributacao e regra comercial antes da importacao.
+
+Texto pronto para envio a cliente/contador salvo em
+`EMAIL_CLIENTE_CONTADOR_PLANILHAS_20260710_A_20260712.md`.
