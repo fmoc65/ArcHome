@@ -334,7 +334,7 @@ public class ImportacaoService
     public async Task ProcessarNinaMartinelliAsync(string caminhoArquivo)
     {
         const string tabela = "NINA MARTINELLI";
-        _logger.LogInformation("Iniciando importacao provisoria Nina Martinelli. Arquivo={Arquivo}", caminhoArquivo);
+        _logger.LogInformation("Iniciando importacao Nina Martinelli. Arquivo={Arquivo}", caminhoArquivo);
         var produtosErp = await _ninaMartinelliReader.LerAsync(caminhoArquivo);
 
         if (!produtosErp.Any())
@@ -343,16 +343,16 @@ public class ImportacaoService
             return;
         }
 
-        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_NINA_MARTINELLI_PROVISORIA_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_NINA_MARTINELLI_IMPOSTOS_CONTADOR_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
         RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
-        _logger.LogWarning("Arquivo Nina Martinelli gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
+        _logger.LogWarning("Arquivo Nina Martinelli gerado com os impostos informados pelo contador; NCM, CST, CFOP e demais campos sem orientacao continuam pendentes.");
     }
 
     public async Task ProcessarSpecialSlAsync(string caminhoArquivo)
     {
         const string tabela = "SL ESPECIAL";
-        _logger.LogInformation("Iniciando importacao provisoria da Tabela Especial SL. Arquivo={Arquivo}", caminhoArquivo);
+        _logger.LogInformation("Iniciando importacao da Tabela Especial SL. Arquivo={Arquivo}", caminhoArquivo);
         var produtosErp = await _specialSlReader.LerAsync(caminhoArquivo);
 
         if (!produtosErp.Any())
@@ -361,10 +361,10 @@ public class ImportacaoService
             return;
         }
 
-        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_SL_ESPECIAL_PROVISORIA_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_SL_ESPECIAL_IMPOSTOS_CONTADOR_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
         RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
-        _logger.LogWarning("Arquivo SL Especial gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
+        _logger.LogInformation("Arquivo SL Especial gerado com as regras tributarias informadas pelo contador em 20/07/2026.");
     }
 
     private bool PossuiProdutos(List<ProdutoNormalizado>? produtos, string tabela)

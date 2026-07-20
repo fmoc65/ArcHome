@@ -1127,3 +1127,84 @@ Arquivos e pendencias principais:
 
 Texto pronto para envio a cliente/contador salvo em
 `EMAIL_CLIENTE_CONTADOR_PLANILHAS_20260710_A_20260712.md`.
+
+## Atualizacao 16/07/2026 - retorno do contador
+
+### Nina Martinelli
+
+O contador informou as seguintes aliquotas gerais para a Nina Martinelli:
+
+- IPI: `0,65%`.
+- ICMS de origem: `12%`.
+- ICMS de saida/interna: `12%`.
+- MVA/IVA: `81%`.
+- ST: `9,86%`, com excecoes de produtos sem incidencia ainda pendentes de relacao.
+- PIS de origem: `1,65%`.
+- COFINS de origem: `7,60%`.
+
+Foi usada como base a ultima saida provisoria, sem alterar os 1.141 cadastros nem os
+dados comerciais:
+
+- Base: `Saida/IMPORTACAO_ERP_NINA_MARTINELLI_PROVISORIA_20260712_195722.xlsx`.
+- Gerado: `Saida/IMPORTACAO_ERP_NINA_MARTINELLI_IMPOSTOS_CONTADOR_20260716_204556.xlsx`.
+- As colunas IPI, ICMS origem, ICMS interno, IVA, PIS origem e COFINS origem foram
+  marcadas em verde como informadas pelo contador.
+- A coluna `PERCENTUAL ST` recebeu `9,86%` em todos os itens e ficou amarela, pois a
+  relacao de referencias sem ST ainda nao foi recebida.
+- NCM, CST, CFOP, CEST, enquadramento IPI, IBS/CBS, classificacao tributaria e demais
+  campos sem orientacao especifica continuam pendentes/vermelhos.
+
+Codigo atualizado para continuidade:
+
+- `NinaMartinelliReaderService` agora armazena as aliquotas acima e as aplica tanto a
+  partir da planilha comercial `COLECAO_COMPLETA` quanto de uma planilha existente na
+  aba `IMPORTACAO_ERP`.
+- `ProcessarNinaMartinelliAsync` gera arquivos com o prefixo
+  `IMPORTACAO_ERP_NINA_MARTINELLI_IMPOSTOS_CONTADOR_`.
+- `dotnet build R3Integrador.slnx --no-restore -m:1 -v minimal` foi executado com
+  sucesso, sem warnings ou erros.
+
+### Arquivos entregues pelo contador
+
+A pasta `/home/fernando/Documentos/Contador` continha quatro arquivos ja no layout ERP
+de 60 colunas. Os valores e a formatacao fiscal proprios de cada fornecedor foram
+preservados, sem aplicar as regras de Nina Martinelli, e copias prontas foram salvas em
+`Saida`:
+
+- `IMPORTACAO_ERP_ROCA_ROCA_CONTADOR_20260716.xlsx`.
+- `IMPORTACAO_ERP_ROCA_CELITE_CONTADOR_20260716.xlsx`.
+- `IMPORTACAO_ERP_RUBINETTOS_RUBINETTOS_CONTADOR_20260716.xlsx`.
+- `IMPORTACAO_ERP_KROMMA_CONTADOR_20260716.xlsx`.
+
+Todos os quatro arquivos passaram no teste de integridade XLSX. Como os arquivos de
+origem ja estavam no layout ERP, esta etapa foi uma preservacao/copia para `Saida`, nao
+uma remapagem dos readers. Antes de recalcular qualquer fornecedor, verificar primeiro
+se o contador enviou novas regras explicitas para ele.
+
+## Atualizacao 20/07/2026 - SL Especial, impostos do contador
+
+Foram recebidas duas planilhas no layout ERP, ambas com 60 colunas e 216 produtos:
+
+- `IMPORTACAO_ERP_SL_ESPECIAL_PROVISORIA_20260712_200000.xlsx`.
+- `IMPORTACAO_ERP_SL_ESPECIAL_PROVISORIA_20260712_205747.xlsx`.
+
+Elas representam o mesmo catalogo: mesmas 216 referencias, precos e valores fiscais.
+A segunda foi adotada como base por estar mais padronizada: usa `X` maiusculo nos
+formatos e deixa `UF ORIGEM` vazio; a primeira preenchia essa coluna com `SP`.
+
+Regras fiscais informadas para todos os itens de SL Especial:
+
+- NCM `69072200`; IPI `0,65%`; ICMS origem e interno `12%`; IVA `81%`; ST `9,86%`.
+- CST `49`; CSOSN `0500`; CFOP dentro `5405`; CFOP fora `6102`.
+- Enquadramento IPI `999`; PIS origem `1,65%`; COFINS origem `7,60%`.
+- IBS `0,1%`; CBS `0,9%`; classificacao tributaria `000001`.
+
+Foi gerado, sem alterar os arquivos recebidos:
+
+- `Saida/IMPORTACAO_ERP_SL_ESPECIAL_IMPOSTOS_CONTADOR_20260720_193823.xlsx`.
+
+O arquivo possui 216 itens e 60 colunas. Os campos acima foram destacados em verde
+como confirmados pelo contador; os demais campos que continuam sem orientacao seguem
+em vermelho. O `SpecialSlReaderService` passou a guardar e aplicar essas regras tanto
+para o PDF de origem quanto para uma planilha ERP existente, permitindo reprocessamento
+futuro pela opcao 14 do console.
