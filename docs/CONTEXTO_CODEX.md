@@ -1208,3 +1208,103 @@ como confirmados pelo contador; os demais campos que continuam sem orientacao se
 em vermelho. O `SpecialSlReaderService` passou a guardar e aplicar essas regras tanto
 para o PDF de origem quanto para uma planilha ERP existente, permitindo reprocessamento
 futuro pela opcao 14 do console.
+
+## Atualizacao 23/07/2026 - retorno do contador, liberacao e Villa Col
+
+### Lote devolvido pelo contador
+
+Foi analisado o arquivo
+`/home/fernando/Documentos/Contador2207/OneDrive_2026-07-23.zip`, correspondente à
+pasta `Novas planilhas` do OneDrive. O ZIP passou no teste de integridade.
+
+Orientacao registrada na conversa com o escritorio em 23/07/2026:
+
+- O contador confirmou que foram devolvidas todas as planilhas do lote.
+- Perguntado se poderiam ser liberadas para importacao, exceto Nina Martinelli sem
+  dados, respondeu: "creio que da para importar sim".
+- Ressalva do contador: nem toda a tributacao pode ser confirmada sem informacao do
+  fornecedor. CST depende da origem; ICMS de entrada depende de UF e nacionalidade/
+  importacao; PIS/COFINS de origem dependem do regime do fornecedor.
+- O contador alertou que os produtos podem sofrer alteracoes de ICMS-ST ate dezembro.
+  Isso nao bloqueia a liberacao atual, mas exige revisao futura quando a regra vigente
+  mudar.
+
+Planilhas liberadas pelo retorno do contador (usar as copias identificadas com
+`OK_CONTADOR` em `Saida`):
+
+- Atlas Revenda 35%.
+- Derosso Revenda.
+- DROP.
+- Imersi Ate 3x.
+- Invita.
+- Kromma.
+- Roca Celite.
+- Roca Roca.
+- Rubinettos.
+- SL Especial.
+
+Nina Martinelli **nao foi liberada**. A versao
+`IMPORTACAO_ERP_NINA_MARTINELLI_IMPOSTOS_CONTADOR_20260717_142323.xlsx` possui 1.141
+produtos, mas a coluna NCM esta vazia em todas as linhas. A pasta do contador tambem
+registra explicitamente que nao se conhece o regime tributario do fornecedor.
+
+Studio Morandin tambem nao entrou na liberacao: ha arquivos na pasta `Contador2207`,
+mas ele nao retornou no lote `Novas planilhas` de 23/07.
+
+Duplicidades verificadas por SHA-256:
+
+- Atlas, Derosso Revenda, DROP, Imersi e Invita: os arquivos nomeados
+  `*_CONTADOR_20260717` sao iguais aos arquivos originais que estavam em `Contador`.
+- Kromma, Roca Celite, Roca Roca e Rubinettos: cada arquivo com sufixo `CONTADOR` no
+  ZIP e identico a uma copia com o nome anterior.
+- Em particular,
+  `IMPORTACAO_ERP_ROCA_CELITE_20260706_200451.xlsx` e
+  `IMPORTACAO_ERP_ROCA_CELITE_CONTADOR_20260717.xlsx` sao identicos byte a byte.
+- Os arquivos Studio Morandin `...133559.xlsx` e `...133559 (1).xlsx` tambem sao
+  identicos.
+
+Foram criadas copias sem alterar os originais, todas verificadas por hash, com o
+sufixo `_OK_CONTADOR.xlsx` em `Saida` para as dez planilhas liberadas. Nina e Studio
+Morandin foram excluidas dessas copias.
+
+### Planilhas pendentes de aprovacao do contador
+
+Varejo, Vinilico e Lastra nao constavam no lote devolvido/aprovado pelo contador em
+23/07. As versoes finais tecnicamente validadas foram copiadas para envio ao contador:
+
+- `IMPORTACAO_ERP_VAREJO_20260701_200706_PARA_APROVACAO_CONTADOR.xlsx`.
+- `IMPORTACAO_ERP_VINILICO_20260701_200706_PARA_APROVACAO_CONTADOR.xlsx`.
+- `IMPORTACAO_ERP_LASTRA_20260701_200706_PARA_APROVACAO_CONTADOR.xlsx`.
+
+Essas tres copias sao identicas aos respectivos arquivos finais anteriores e ainda
+nao possuem o status `OK_CONTADOR`.
+
+### Villa Col - Delcredere
+
+Nao havia reader, processamento ou arquivo anterior de Villa Col no projeto. A fonte
+encontrada foi
+`/home/fernando/Projetos/Work/ARCHOME/Planilhas/TABELA DEL - VILLACOL - ARC HOME 04-05-2026.pdf`,
+confirmada tambem pela captura de tela de 23/07/2026. Ela possui apenas dez descricoes
+de produtos e os precos de comissao DEL5, DEL10, DEL15, DEL20, DEL25 e DEL30; nao
+informa SKU, EAN, unidade, embalagem, NCM, CEST ou tributacao.
+
+Foi criada a planilha de conferencia
+`TABELA_DELCREDERE_VILLACOL_PARA_APROVACAO_CONTADOR_20260723.xlsx`, com as abas
+`PRECOS_DEL` e `PENDENCIAS_CONTADOR`.
+
+Para seguir a mesma separacao usada nos demais Delcredere, foram geradas seis
+planilhas no layout ERP, com dez itens cada, ainda para aprovacao e **nao para
+importacao**:
+
+- `IMPORTACAO_ERP_DELCREDERE_DEL5_VILLACOL_PARA_APROVACAO_CONTADOR_20260723.xlsx`.
+- `IMPORTACAO_ERP_DELCREDERE_DEL10_VILLACOL_PARA_APROVACAO_CONTADOR_20260723.xlsx`.
+- `IMPORTACAO_ERP_DELCREDERE_DEL15_VILLACOL_PARA_APROVACAO_CONTADOR_20260723.xlsx`.
+- `IMPORTACAO_ERP_DELCREDERE_DEL20_VILLACOL_PARA_APROVACAO_CONTADOR_20260723.xlsx`.
+- `IMPORTACAO_ERP_DELCREDERE_DEL25_VILLACOL_PARA_APROVACAO_CONTADOR_20260723.xlsx`.
+- `IMPORTACAO_ERP_DELCREDERE_DEL30_VILLACOL_PARA_APROVACAO_CONTADOR_20260723.xlsx`.
+
+Em cada arquivo, a marca e `VILLACOL <percentual>`, o preco de fabrica e o valor
+transcrito do PDF e o preco de venda foi calculado com o fator Delcredere usado no
+projeto (`PrecoVenda = PrecoFabrica * 1,0065`). Os campos sem fonte — codigos, unidade,
+embalagem e campos fiscais — ficaram vazios e destacados em vermelho como pendentes.
+Nao importar ate aprovacao comercial e fiscal.
