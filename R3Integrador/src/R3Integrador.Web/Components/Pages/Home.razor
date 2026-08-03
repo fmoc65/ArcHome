@@ -1,0 +1,100 @@
+@page "/"
+@inject ImportacaoService ImportacaoService
+@inject HistoricoAtualizacaoStore Historico
+
+<PageTitle>Importar tabela de preços | R3 Integrador</PageTitle>
+
+<section class="page-header">
+    <div><h1>Importar tabela de preços</h1><p>Envie a tabela do fornecedor para normalizar os dados e gerar o arquivo de atualização do ERP.</p></div>
+</section>
+
+<section class="import-workspace" aria-label="Importação de tabela">
+    <div class="form-field"><label for="tabela">Tabela de preços</label>
+        <select id="tabela" @bind="selecionada" @bind:after="AoMudarTabela" disabled="@processando">
+            @foreach (var tabela in Tabelas) { <option value="@tabela.Id">@tabela.Nome</option> }
+        </select>
+        <span class="field-help">@TabelaAtual.Descricao</span>
+    </div>
+
+    @if (TabelaAtual.ArquivoComplementar)
+    {
+        <div class="notice"><span>i</span><div><strong>Arquivo complementar necessário</strong><br />Envie também a planilha de alíquotas para processar esta tabela.</div></div>
+    }
+
+    <div class="upload-grid">
+        <UploadBox Titulo="Planilha da tabela" Aceitos="@TabelaAtual.Aceitos" Desabilitado="@processando" OnArquivoSelecionado="SelecionarPrincipal" />
+        @if (TabelaAtual.ArquivoComplementar)
+        { <UploadBox Titulo="Planilha de alíquotas" Aceitos=".xlsx" Desabilitado="@processando" OnArquivoSelecionado="SelecionarComplementar" /> }
+    </div>
+
+    @if (arquivoPrincipal is not null)
+    {
+        <div class="file-row"><div class="file-icon">@TipoArquivo</div><div class="file-name"><strong>@arquivoPrincipal.Name</strong><span>@FormatarTamanho(arquivoPrincipal.Size) · @StatusArquivo</span></div>
+            @if (!processando) { <button class="remove-file" @onclick="LimparArquivo" aria-label="Remover arquivo">×</button> }
+            else { <span class="spinner" aria-label="Processando"></span> }
+        </div>
+        @if (processando || progresso > 0)
+        { <div class="progress-wrap"><div class="progress-track"><span style="width: @progresso%"></span></div><div class="progress-meta"><span>@MensagemProgresso</span><strong>@progresso%</strong></div></div> }
+    }
+
+    @if (!string.IsNullOrEmpty(mensagemResultado)) { <div class="result @resultadoClasse"><span>@(resultadoClasse == "success" ? "✓" : "!")</span>@mensagemResultado</div> }
+
+    <div class="actions"><span class="format-info">Formatos aceitos: @TabelaAtual.Formatos</span><button class="primary-button" @onclick="Processar" disabled="@(arquivoPrincipal is null || processando || (TabelaAtual.ArquivoComplementar && arquivoComplementar is null))">@(processando ? "Processando..." : "Importar e atualizar")</button></div>
+</section>
+
+<section class="how-it-works"><h2>Como funciona</h2><div class="steps"><div><span>1</span><h3>Selecione a tabela</h3><p>Escolha o fornecedor e a regra de leitura correspondente.</p></div><div><span>2</span><h3>Envie a planilha</h3><p>Arraste o arquivo ou selecione-o no seu computador.</p></div><div><span>3</span><h3>Atualize o ERP</h3><p>Baixe o arquivo gerado na pasta de saída configurada.</p></div></div></section>
+
+@code {
+    private string selecionada = "varejo";
+    private IBrowserFile? arquivoPrincipal;
+    private IBrowserFile? arquivoComplementar;
+    private bool processando;
+    private int progresso;
+    private string MensagemProgresso = "Pronto para importar";
+    private string? mensagemResultado;
+    private string resultadoClasse = "success";
+    private TabelaImportacao TabelaAtual => Tabelas.Single(x => x.Id == selecionada);
+    private string StatusArquivo => processando ? MensagemProgresso : "Pronto para processamento";
+    private string TipoArquivo => arquivoPrincipal?.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) == true ? "PDF" : "XLS";
+    private static readonly List<TabelaImportacao> Tabelas = new()
+    {
+        new("varejo", "Varejo (abas padrão)", "Processa a aba VAREJO da planilha padrão.", ".xlsx", "Excel (.xlsx)", false),
+        new("vinilico", "Vinílico", "Leitura dedicada para tabela Vinílico.", ".xlsx", "Excel (.xlsx)", false), new("lastra", "Lastra", "Leitura dedicada para tabela Lastra.", ".xlsx", "Excel (.xlsx)", false),
+        new("delcredere", "Del Credere Varejo", "Tabela de preços com planilha de alíquotas complementar.", ".xlsx", "Excel (.xlsx)", true), new("villaart", "Villa Art — Boutique", "Leitura dedicada para Villa Art.", ".xlsx", "Excel (.xlsx)", false),
+        new("rubinetto", "Rubinettos", "Gera arquivos separados por marca.", ".xlsx", "Excel (.xlsx)", false), new("roca", "Roca / Celite", "Gera arquivos separados por marca.", ".xlsx", "Excel (.xlsx)", false),
+        new("imersi", "Imersi", "Gera arquivos separados por tabela de preço.", ".xlsx", "Excel (.xlsx)", false), new("studio", "Studio Morandin", "Processamento provisório — valide antes de importar no ERP.", ".xlsx", "Excel (.xlsx)", false),
+        new("invita", "Invita", "Processamento provisório — valide antes de importar no ERP.", ".xlsx", "Excel (.xlsx)", false), new("derosso", "Derosso", "Processamento provisório — identifica Revenda ou Representação.", ".xlsx", "Excel (.xlsx)", false),
+        new("atlas", "Atlas Revenda 35%", "Processamento provisório — valide antes de importar no ERP.", ".xlsx", "Excel (.xlsx)", false), new("nina", "Nina Martinelli", "Tabela com regras tributárias informadas pelo contador.", ".xlsx", "Excel (.xlsx)", false),
+        new("sl", "Tabela Especial SL", "Aceita a tabela especial em Excel ou PDF.", ".xlsx,.pdf", "Excel (.xlsx) ou PDF", false)
+    };
+    private void SelecionarPrincipal(InputFileChangeEventArgs e) { arquivoPrincipal = e.File; mensagemResultado = null; progresso = 0; }
+    private void SelecionarComplementar(InputFileChangeEventArgs e) { arquivoComplementar = e.File; mensagemResultado = null; }
+    private void LimparArquivo() { arquivoPrincipal = null; arquivoComplementar = null; progresso = 0; mensagemResultado = null; }
+    private void AoMudarTabela() => LimparArquivo();
+    private async Task Processar()
+    {
+        if (arquivoPrincipal is null) return;
+        processando = true; progresso = 18; MensagemProgresso = "Enviando arquivo com segurança"; mensagemResultado = null;
+        string? principal = null; string? complementar = null;
+        try { principal = await SalvarTemporario(arquivoPrincipal); complementar = arquivoComplementar is null ? null : await SalvarTemporario(arquivoComplementar);
+            progresso = 58; MensagemProgresso = "Validando estrutura da planilha"; await InvokeAsync(StateHasChanged); await Task.Delay(180);
+            MensagemProgresso = "Normalizando dados e gerando arquivo ERP"; await ExecutarFluxo(principal, complementar); progresso = 100; MensagemProgresso = "Processamento concluído";
+            Historico.Registrar(TabelaAtual.Nome, arquivoPrincipal.Name);
+            resultadoClasse = "success"; mensagemResultado = "Tabela processada com sucesso. O arquivo de atualização do ERP foi salvo na pasta Saída.";
+        }
+        catch (Exception ex) { progresso = 0; resultadoClasse = "error"; mensagemResultado = $"Não foi possível processar a tabela: {ex.Message}"; }
+        finally { processando = false; ApagarTemporario(principal); ApagarTemporario(complementar); }
+    }
+    private Task ExecutarFluxo(string arquivo, string? complementar) => selecionada switch
+    {
+        "varejo" => ImportacaoService.ProcessarPadraoAsync(arquivo, "VAREJO"), "vinilico" => ImportacaoService.ProcessarVinilicoAsync(arquivo), "lastra" => ImportacaoService.ProcessarLastraAsync(arquivo),
+        "delcredere" => ImportacaoService.ProcessarDelcredereAsync(arquivo, complementar), "villaart" => ImportacaoService.ProcessarVillaArtAsync(arquivo), "rubinetto" => ImportacaoService.ProcessarRubinettosAsync(arquivo),
+        "roca" => ImportacaoService.ProcessarRocaAsync(arquivo), "imersi" => ImportacaoService.ProcessarImersiAsync(arquivo), "studio" => ImportacaoService.ProcessarStudioMorandinAsync(arquivo),
+        "invita" => ImportacaoService.ProcessarInvitaAsync(arquivo), "derosso" => ImportacaoService.ProcessarDerossoAsync(arquivo), "atlas" => ImportacaoService.ProcessarAtlasAsync(arquivo),
+        "nina" => ImportacaoService.ProcessarNinaMartinelliAsync(arquivo), "sl" => ImportacaoService.ProcessarSpecialSlAsync(arquivo), _ => Task.CompletedTask
+    };
+    private static async Task<string> SalvarTemporario(IBrowserFile arquivo) { var pasta = Path.Combine(Path.GetTempPath(), "R3Integrador", "uploads"); Directory.CreateDirectory(pasta); var caminho = Path.Combine(pasta, $"{Guid.NewGuid():N}{Path.GetExtension(arquivo.Name)}"); await using var destino = File.Create(caminho); await arquivo.OpenReadStream(100 * 1024 * 1024).CopyToAsync(destino); return caminho; }
+    private static void ApagarTemporario(string? caminho) { if (!string.IsNullOrEmpty(caminho) && File.Exists(caminho)) File.Delete(caminho); }
+    private static string FormatarTamanho(long bytes) => bytes < 1024 * 1024 ? $"{Math.Ceiling(bytes / 1024d)} KB" : $"{bytes / 1024d / 1024d:0.0} MB";
+    private sealed record TabelaImportacao(string Id, string Nome, string Descricao, string Aceitos, string Formatos, bool ArquivoComplementar);
+}

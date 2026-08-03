@@ -1,0 +1,5 @@
+<div class="upload-box" data-upload-zone>
+    <InputFile id="@Id" class="upload-input" OnChange="OnArquivoSelecionado" accept="@Aceitos" disabled="@Desabilitado" />
+    <label for="@Id" class="upload-label"><span class="upload-icon">⇧</span><strong>@Titulo</strong><span>Arraste a planilha aqui ou <b>selecione o arquivo</b></span><small>@(Aceitos.Contains("pdf") ? "PDF ou XLSX" : "Arquivo XLSX")</small></label>
+</div>
+@code { [Parameter] public string Titulo { get; set; } = "Planilha"; [Parameter] public string Aceitos { get; set; } = ".xlsx"; [Parameter] public bool Desabilitado { get; set; } [Parameter] public EventCallback<InputFileChangeEventArgs> OnArquivoSelecionado { get; set; } private string Id { get; } = $"file-{Guid.NewGuid():N}"; }

@@ -1,0 +1,23 @@
+@inherits LayoutComponentBase
+@inject IConfiguration Configuration
+<div class="app-shell">
+    <aside class="sidebar">
+        <a class="brand" href="/" aria-label="R3 Integrador"><span class="brand-symbol">R3</span><span>integrador</span></a>
+        <div class="client-context">
+            <span class="client-label">Cliente ativo</span>
+            <strong>@ClienteNome</strong>
+            <small>@ClienteUnidade</small>
+        </div>
+        <nav aria-label="Navegação principal">
+            <NavLink class="nav-item" href="/" Match="NavLinkMatch.All"><span class="nav-icon">↥</span>Importações</NavLink>
+            <NavLink class="nav-item" href="atualizacoes"><span class="nav-icon">↻</span>Atualizações</NavLink>
+        </nav>
+        <div class="sidebar-footer"><span class="status-dot"></span>Sistema disponível</div>
+    </aside>
+    <main>@Body</main>
+</div>
+
+@code {
+    private string ClienteNome => Configuration["Cliente:Nome"] ?? "Cliente não identificado";
+    private string ClienteUnidade => Configuration["Cliente:Unidade"] ?? "Ambiente de importação";
+}

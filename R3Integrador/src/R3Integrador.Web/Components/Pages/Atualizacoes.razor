@@ -1,0 +1,26 @@
+@page "/atualizacoes"
+@inject HistoricoAtualizacaoStore Historico
+
+<PageTitle>Atualizações | R3 Integrador</PageTitle>
+
+<section class="page-header updates-header">
+    <div><h1>Atualizações</h1><p>Acompanhe as tabelas processadas nesta sessão e confirme quais arquivos estão prontos para atualização no ERP.</p></div>
+    <a class="secondary-button" href="/">Nova importação</a>
+</section>
+
+<section class="updates-workspace" aria-label="Histórico de atualizações">
+    <div class="updates-title"><div><h2>Processamentos recentes</h2><p>O histórico é mantido enquanto esta sessão estiver aberta.</p></div><span class="count">@Historico.Itens.Count item(ns)</span></div>
+    @if (Historico.Itens.Count == 0)
+    {
+        <div class="empty-state"><span class="empty-icon">↻</span><h2>Nenhuma atualização nesta sessão</h2><p>Quando uma tabela for importada com sucesso, ela aparecerá aqui para conferência.</p><a class="primary-button" href="/">Importar tabela</a></div>
+    }
+    else
+    {
+        <div class="updates-table" role="table" aria-label="Processamentos concluídos">
+            <div class="updates-row table-heading" role="row"><span>Tabela</span><span>Arquivo enviado</span><span>Status</span><span>Processado em</span></div>
+            @foreach (var item in Historico.Itens)
+            { <div class="updates-row" role="row"><strong>@item.Tabela</strong><span class="update-file">@item.Arquivo</span><span class="completed">✓ Concluído</span><time datetime="@item.ProcessadoEm.ToString("O")">@item.ProcessadoEm.ToString("dd/MM/yyyy 'às' HH:mm")</time></div> }
+        </div>
+        <p class="output-note">Os arquivos gerados ficam disponíveis na pasta <strong>Saída</strong> configurada no ambiente.</p>
+    }
+</section>
