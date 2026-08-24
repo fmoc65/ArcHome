@@ -11,6 +11,8 @@ namespace R3Integrador.Infrastructure.Repositories;
 public class DelcredereReaderService : IDelcredereReader
 {
     private const string NomeAba = "COM DEL CREDERE";
+    private const decimal IpiPercentual = 0.65m;
+    private const decimal TaxaCartaoPercentual = 4.71m;
 
     private static readonly (string Nome, int Coluna)[] TabelasPreco =
     [
@@ -31,14 +33,16 @@ public class DelcredereReaderService : IDelcredereReader
 
         using var workbook = new XLWorkbook(caminhoArquivo);
 
-        if (!workbook.TryGetWorksheet(NomeAba, out var worksheet))
+        var worksheet = ObterPlanilhaDelcredere(workbook);
+        if (worksheet == null)
         {
-            Console.WriteLine($"Aba {NomeAba} nao encontrada.");
+            Console.WriteLine($"Aba Del Credere nao encontrada. Esperada: {NomeAba}.");
             return produtos;
         }
 
         var ultimaLinha = worksheet.LastRowUsed()?.RowNumber() ?? 0;
         var estado = new LinhaDelcredere();
+        var legendaSegmentos = CarregarLegendaSegmentos(worksheet);
 
         for (var row = 1; row <= ultimaLinha; row++)
         {
@@ -51,6 +55,7 @@ public class DelcredereReaderService : IDelcredereReader
 
             var referencia = ExtrairReferencia(referenciaOriginal);
             estado.Atualizar(worksheet, row);
+            var segmentacao = DeterminarSegmentacao(worksheet, row, legendaSegmentos);
 
             foreach (var tabelaPreco in TabelasPreco)
             {
@@ -63,6 +68,7 @@ public class DelcredereReaderService : IDelcredereReader
                     Linha = estado.Linha,
                     Colecao = estado.Colecao,
                     Cor = estado.Cor,
+                    SegmentacaoComercial = segmentacao,
                     Superficie = estado.Superficie,
                     Grupo = "PORCELANATO",
                     SubGrupo = NormalizarSubGrupo(estado.Superficie),
@@ -93,8 +99,72 @@ public class DelcredereReaderService : IDelcredereReader
 
         Console.WriteLine();
         Console.WriteLine($"[OK] {produtos.Count} registros Del Credere processados com sucesso.");
+        var segmentos = produtos
+            .GroupBy(produto => string.IsNullOrWhiteSpace(produto.SegmentacaoComercial)
+                ? "SEM SEGMENTACAO VISUAL"
+                : produto.SegmentacaoComercial)
+            .OrderBy(grupo => grupo.Key)
+            .Select(grupo => $"{grupo.Key}: {grupo.Select(produto => produto.Referencia).Distinct().Count()}");
+        Console.WriteLine($"[INFO] Segmentacao visual B/C: {string.Join("; ", segmentos)}.");
 
         return await Task.FromResult(produtos);
+    }
+
+    private static IXLWorksheet? ObterPlanilhaDelcredere(XLWorkbook workbook)
+    {
+        if (workbook.TryGetWorksheet(NomeAba, out var worksheetPadrao))
+        {
+            return worksheetPadrao;
+        }
+
+        // A tabela atual recebida foi nomeada "100 TABELA COM DEL CREDERE".
+        // Aceitar variações do título, validando também o cabeçalho das seis faixas.
+        return workbook.Worksheets.FirstOrDefault(worksheet =>
+            worksheet.Name.Contains("DEL CREDERE", StringComparison.OrdinalIgnoreCase)
+            && worksheet.Cell(3, 2).GetString().Trim()
+                .Equals("REF.", StringComparison.OrdinalIgnoreCase)
+            && worksheet.Cell(4, 18).GetString().Contains("DEL", StringComparison.OrdinalIgnoreCase)
+            && worksheet.Cell(4, 23).GetString().Contains("DEL", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static IReadOnlyCollection<SegmentoLegenda> CarregarLegendaSegmentos(IXLWorksheet worksheet)
+    {
+        var segmentos = new List<SegmentoLegenda>();
+        var ultimaLinha = worksheet.LastRowUsed()?.RowNumber() ?? 0;
+
+        for (var row = 1; row <= ultimaLinha; row++)
+        {
+            var descricao = worksheet.Cell(row, 2).GetString().Trim();
+            var nome = descricao switch
+            {
+                "VILLA PREMIUM" => "VILLA PREMIUM",
+                "VILLA EXCLUSIVE" => "VILLA EXCLUSIVE",
+                "VILLA MAX" => "VILLA MAX",
+                "VILLA STYLE (e também os itens **)" => "VILLA STYLE",
+                "EXCLUSIVO VILLA ART" => "EXCLUSIVO VILLA ART",
+                _ => string.Empty
+            };
+
+            if (!string.IsNullOrWhiteSpace(nome))
+            {
+                segmentos.Add(new SegmentoLegenda(nome, worksheet.Cell(row, 2).Style.Fill.BackgroundColor));
+            }
+        }
+
+        return segmentos;
+    }
+
+    private static string DeterminarSegmentacao(
+        IXLWorksheet worksheet,
+        int row,
+        IReadOnlyCollection<SegmentoLegenda> legendaSegmentos)
+    {
+        var corReferencia = worksheet.Cell(row, 2).Style.Fill.BackgroundColor;
+        var corLinha = worksheet.Cell(row, 3).Style.Fill.BackgroundColor;
+        var segmento = legendaSegmentos.FirstOrDefault(item =>
+            item.Cor.Equals(corReferencia) || item.Cor.Equals(corLinha));
+
+        return segmento?.Nome ?? string.Empty;
     }
 
     private static async Task<Dictionary<string, AliquotaLinha>> CarregarAliquotasAsync(string caminhoAliquotas)
@@ -221,7 +291,8 @@ public class DelcredereReaderService : IDelcredereReader
 
     private static decimal CalcularPrecoVendaDelcredere(decimal preco)
     {
-        return Math.Round(preco * 1.0065m, 2);
+        var acrescimoPercentual = (IpiPercentual + TaxaCartaoPercentual) / 100m;
+        return Math.Round(preco * (1m + acrescimoPercentual), 2);
     }
 
     private sealed class LinhaDelcredere
@@ -285,4 +356,6 @@ public class DelcredereReaderService : IDelcredereReader
         public string ClassificacaoTributaria { get; init; } = string.Empty;
         public string CodigoBeneficio { get; init; } = string.Empty;
     }
+
+    private sealed record SegmentoLegenda(string Nome, XLColor Cor);
 }

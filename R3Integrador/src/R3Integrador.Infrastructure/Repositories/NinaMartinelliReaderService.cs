@@ -1,6 +1,7 @@
 using ClosedXML.Excel;
 using R3Integrador.Application.DTOs;
 using R3Integrador.Application.Interfaces;
+using R3Integrador.Application.Services;
 using System.Text.RegularExpressions;
 
 namespace R3Integrador.Infrastructure.Repositories;
@@ -11,15 +12,16 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
     private const string NomeAbaImportacaoErp = "IMPORTACAO_ERP";
     private const string Marca = "NINA MARTINELLI";
 
-    // Regras recebidas do contador em 16/07/2026. A ST permanece estimada ate o
-    // recebimento da relacao de produtos sem incidencia.
-    private const decimal IpiPercentualContador = 0.65m;
-    private const decimal AliqIcmsOrigemContador = 12m;
-    private const decimal AliqIcmsInternaContador = 12m;
-    private const decimal IvaContador = 81m;
-    private const decimal PercentualStPadraoContador = 9.86m;
-    private const string AliquotaPisOrigemContador = "1,65";
-    private const string AliquotaCofinsOrigemContador = "7,60";
+    private readonly ICsosnService _csosnService;
+    private readonly NinaFiscalParameters _fiscalParameters;
+
+    public NinaMartinelliReaderService(
+        ICsosnService csosnService,
+        NinaFiscalParameters fiscalParameters)
+    {
+        _csosnService = csosnService;
+        _fiscalParameters = fiscalParameters;
+    }
 
     public Task<List<ProdutoErpDto>> LerAsync(string caminhoArquivo)
     {
@@ -55,6 +57,7 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
             var unidade = NormalizarUnidade(worksheet.Cell(row, 18).GetString());
             var embalagem = LerDecimal(worksheet.Cell(row, 11));
             var preco = LerDecimal(worksheet.Cell(row, 13));
+            var tributacaoSt = LerTributacaoSt(worksheet, row);
 
             var codigo = codigoOrigem;
             if (codigoOrigem.Equals("depende do raio", StringComparison.OrdinalIgnoreCase) || !referenciasUsadas.Add(codigo))
@@ -77,7 +80,7 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
                 Linha = aplicacao,
                 Modelo = dimensao,
                 Cor = cor,
-                UfOrigem = NormalizarTexto(worksheet.Cell(row, 19).GetString()),
+                UfOrigem = _fiscalParameters.UfFabrica,
                 // O preco de representacao e preservado provisoriamente nas duas colunas;
                 // frete, margem e tributacao ainda nao foram homologados.
                 PrecoVenda = preco,
@@ -92,18 +95,19 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
                 Observacao = CriarObservacao(worksheet, row, codigoOrigem, codigo, embalagem),
                 SituacaoCamposFiscais = CriarSituacaoCamposFiscais()
             };
-            AplicarTributacaoContador(produto);
+            AplicarTributacao(produto, tributacaoSt);
             produtos.Add(produto);
         }
 
         Console.WriteLine();
         Console.WriteLine($"[OK] {produtos.Count} produtos Nina Martinelli processados.");
         Console.WriteLine($"[INFO] {referenciasTecnicasCriadas} referencia(s) tecnica(s) criada(s) para codigos repetidos.");
-        Console.WriteLine("[ATENCAO] NCM e demais campos fiscais sem orientacao do contador continuam pendentes.");
+        Console.WriteLine("[INFO] CSOSN e ST determinados automaticamente por linha; ausencia de indicacao de ST resulta em CSOSN 102 e ST zero.");
+        Console.WriteLine("[ATENCAO] NCM, CST, CFOP e demais campos sem premissa informada continuam pendentes.");
         return Task.FromResult(produtos);
     }
 
-    private static List<ProdutoErpDto> LerImportacaoErp(IXLWorksheet worksheet)
+    private List<ProdutoErpDto> LerImportacaoErp(IXLWorksheet worksheet)
     {
         var produtos = new List<ProdutoErpDto>();
         var ultimaLinha = worksheet.LastRowUsed()?.RowNumber() ?? 0;
@@ -138,7 +142,13 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
                 ClassificacaoTributaria = Texto(worksheet, row, 59), CodigoBeneficio = Texto(worksheet, row, 60),
                 SituacaoCamposFiscais = CriarSituacaoCamposFiscais()
             };
-            AplicarTributacaoContador(produto);
+            AplicarTributacao(
+                produto,
+                new TributacaoStLinha(
+                    produto.PercentualSt,
+                    produto.PercentualSt == 0m,
+                    produto.Csosn == "500",
+                    produto.Csosn == "400"));
             produtos.Add(produto);
         }
 
@@ -147,22 +157,71 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
         return produtos;
     }
 
-    private static void AplicarTributacaoContador(ProdutoErpDto produto)
+    private void AplicarTributacao(ProdutoErpDto produto, TributacaoStLinha tributacaoSt)
     {
-        produto.IpiPercentual = IpiPercentualContador;
-        produto.AliqIcmsOrigem = AliqIcmsOrigemContador;
-        produto.AliqIcmsInterna = AliqIcmsInternaContador;
-        produto.Iva = IvaContador;
-        produto.PercentualSt = PercentualStPadraoContador;
-        produto.AliquotaPisOrigem = AliquotaPisOrigemContador;
-        produto.AliquotaCofinsOrigem = AliquotaCofinsOrigemContador;
+        var resultadoCsosn = _csosnService.Determinar(new CsosnCenario(
+            tributacaoSt.PercentualInformado,
+            tributacaoSt.SemIncidencia,
+            tributacaoSt.IcmsStCobradoAnteriormente,
+            OperacaoNaoTributada: tributacaoSt.OperacaoNaoTributada));
 
-        foreach (var coluna in new[] { 18, 19, 20, 21, 52, 53 })
+        produto.UfOrigem = _fiscalParameters.UfFabrica;
+        produto.IpiPercentual = _fiscalParameters.Ipi;
+        produto.AliqIcmsOrigem = _fiscalParameters.AliquotaIcmsOrigem;
+        produto.AliqIcmsInterna = _fiscalParameters.AliquotaIcmsSaida;
+        produto.Iva = _fiscalParameters.Mva;
+        produto.PercentualSt = resultadoCsosn.PercentualSt;
+        produto.Csosn = resultadoCsosn.Codigo;
+        produto.AliquotaPisOrigem = _fiscalParameters.PisOrigemTexto;
+        produto.AliquotaCofinsOrigem = _fiscalParameters.CofinsOrigemTexto;
+
+        foreach (var coluna in new[] { 14, 18, 19, 20, 21, 30, 39, 52, 53 })
         {
             produto.SituacaoCamposFiscais[coluna] = SituacaoCampoFiscal.Confirmado;
         }
+    }
 
-        produto.SituacaoCamposFiscais[39] = SituacaoCampoFiscal.Estimado;
+    private static TributacaoStLinha LerTributacaoSt(IXLWorksheet worksheet, int row)
+    {
+        var textoLinha = string.Join(
+            " ",
+            worksheet.Row(row).Cells(1, worksheet.LastColumnUsed()?.ColumnNumber() ?? 22)
+                .Select(cell => cell.GetFormattedString()));
+        var textoNormalizado = NormalizarTexto(textoLinha);
+
+        if (textoNormalizado.Contains("ST RECOLHID", StringComparison.Ordinal)
+            || textoNormalizado.Contains("ST RETID", StringComparison.Ordinal)
+            || textoNormalizado.Contains("ST COBRADO ANTERIORMENTE", StringComparison.Ordinal)
+            || textoNormalizado.Contains("ST COBRADA ANTERIORMENTE", StringComparison.Ordinal))
+        {
+            return new TributacaoStLinha(0.0986m, false, true);
+        }
+
+        if (textoNormalizado.Contains("NAO TRIBUTAD", StringComparison.Ordinal)
+            || textoNormalizado.Contains("NÃO TRIBUTAD", StringComparison.Ordinal))
+        {
+            return new TributacaoStLinha(0m, true, OperacaoNaoTributada: true);
+        }
+
+        if (textoNormalizado.Contains("SEM ST", StringComparison.Ordinal)
+            || textoNormalizado.Contains("ST ISENTO", StringComparison.Ordinal)
+            || textoNormalizado.Contains("NAO TEM ST", StringComparison.Ordinal)
+            || textoNormalizado.Contains("NÃO TEM ST", StringComparison.Ordinal))
+        {
+            return new TributacaoStLinha(0m, true);
+        }
+
+        var match = Regex.Match(
+            textoNormalizado,
+            @"(?:PERCENTUAL\s*)?ST\s*[:=-]?\s*(9[,.]86|0[,.]0986)\s*%?",
+            RegexOptions.IgnoreCase);
+        if (match.Success)
+        {
+            return new TributacaoStLinha(DecimalParser.Parse(match.Groups[1].Value), false);
+        }
+
+        // Sem indicação explícita, não presume incidência de ST.
+        return new TributacaoStLinha(0m, true);
     }
 
     private static string Texto(IXLWorksheet worksheet, int row, int column) => worksheet.Cell(row, column).GetFormattedString().Trim();
@@ -205,7 +264,7 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
     }
 
     private static decimal CalcularEmbalagemVenda(string unidade, decimal embalagem) =>
-        unidade == "M2" && embalagem > 0 ? embalagem : 1;
+        unidade == "M2" ? 0 : 1;
 
     private static string CriarReferenciaTecnica(string nome, string cor, string dimensao, int row)
     {
@@ -228,4 +287,10 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
     }
 
     private static string NormalizarTexto(string valor) => Regex.Replace(valor.Trim(), @"\s+", " ").ToUpperInvariant();
+
+    private sealed record TributacaoStLinha(
+        decimal PercentualInformado,
+        bool SemIncidencia,
+        bool IcmsStCobradoAnteriormente = false,
+        bool OperacaoNaoTributada = false);
 }

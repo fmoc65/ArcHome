@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using R3Integrador.Application.DTOs;
 using R3Integrador.Application.Interfaces;
 using R3Integrador.Application.Mappers;
+using System.Text.Json;
 
 namespace R3Integrador.Application.Services;
 
@@ -17,18 +18,21 @@ public class ImportacaoService
     private readonly IRocaReader _rocaReader;
     private readonly IImersiReader _imersiReader;
     private readonly IStudioMorandinReader _studioMorandinReader;
+    private readonly IAdamaReader _adamaReader;
     private readonly IInvitaReader _invitaReader;
     private readonly IDerossoReader _derossoReader;
     private readonly IAtlasReader _atlasReader;
     private readonly INinaMartinelliReader _ninaMartinelliReader;
     private readonly ISpecialSlReader _specialSlReader;
     private readonly IExcelExporter _excelExporter;
+    private readonly IExcelResumidoExporter _excelResumidoExporter;
     private readonly ILogger<ImportacaoService> _logger;
     private readonly string _pastaSaida;
 
     public ImportacaoService(
         ImportacaoReaderSet readers,
         IExcelExporter excelExporter,
+        IExcelResumidoExporter excelResumidoExporter,
         ILogger<ImportacaoService> logger,
         IConfiguration configuration)
     {
@@ -41,12 +45,14 @@ public class ImportacaoService
         _rocaReader = readers.RocaReader;
         _imersiReader = readers.ImersiReader;
         _studioMorandinReader = readers.StudioMorandinReader;
+        _adamaReader = readers.AdamaReader;
         _invitaReader = readers.InvitaReader;
         _derossoReader = readers.DerossoReader;
         _atlasReader = readers.AtlasReader;
         _ninaMartinelliReader = readers.NinaMartinelliReader;
         _specialSlReader = readers.SpecialSlReader;
         _excelExporter = excelExporter;
+        _excelResumidoExporter = excelResumidoExporter;
         _logger = logger;
         _pastaSaida = configuration["Diretorios:PastaSaida"]
             ?? Path.Combine(AppContext.BaseDirectory, "Saida");
@@ -111,6 +117,139 @@ public class ImportacaoService
         }
 
         _logger.LogInformation("Processamento e exportacao Del Credere concluidos com sucesso.");
+    }
+
+    public async Task ProcessarAtualizacaoDelcredereAsync(string caminhoArquivo)
+    {
+        const string tabela = "COM DEL CREDERE";
+        const string marcaAtualizacao = "VILLAGRES";
+        _logger.LogInformation(
+            "Iniciando atualizacao resumida Del Credere Villagres. Arquivo={Arquivo}; Aba={Aba}",
+            caminhoArquivo,
+            tabela);
+
+        var produtosBrutos = await _delcredereReader.LerAsync(caminhoArquivo);
+        var produtosAtualizacao = produtosBrutos
+            .Where(produto => produto.Marca.Equals(marcaAtualizacao, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (!PossuiProdutos(produtosAtualizacao, $"{tabela} {marcaAtualizacao}"))
+        {
+            return;
+        }
+
+        var identificadorExecucao = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var pastaAtualizacao = Path.Combine(
+            _pastaSaida,
+            $"ATUALIZACAO_DELCREDERE_VILLAGRES_{identificadorExecucao}");
+        Directory.CreateDirectory(pastaAtualizacao);
+
+        var relatorioAuditoria = CriarRelatorioAuditoriaDelcredere(
+            caminhoArquivo,
+            produtosBrutos,
+            produtosAtualizacao);
+        var caminhoAuditoria = Path.Combine(pastaAtualizacao, "RELATORIO_AUDITORIA_VILLAGRES_DELCREDERE.json");
+        await File.WriteAllTextAsync(
+            caminhoAuditoria,
+            JsonSerializer.Serialize(relatorioAuditoria, new JsonSerializerOptions { WriteIndented = true }));
+
+        foreach (var grupoTabela in produtosAtualizacao
+            .GroupBy(produto => produto.TabelaPreco)
+            .OrderBy(grupo => grupo.Key))
+        {
+            var produtosErp = grupoTabela.Select(ProdutoErpMapper.Map).ToList();
+            var sufixoTabela = string.IsNullOrWhiteSpace(grupoTabela.Key)
+                ? "SEM_TABELA"
+                : grupoTabela.Key;
+            var arquivoSaida = Path.Combine(
+                pastaAtualizacao,
+                $"ATUALIZACAO_DELCREDERE_{sufixoTabela}_{marcaAtualizacao}.xlsx");
+
+            foreach (var produto in produtosErp)
+            {
+                produto.Marca = ObterMarcaRepresentada(
+                    marcaAtualizacao,
+                    grupoTabela.Key);
+            }
+
+            foreach (var par in grupoTabela.Zip(produtosErp))
+            {
+                if (!string.IsNullOrWhiteSpace(par.First.SegmentacaoComercial))
+                {
+                    // O layout resumido não possui coluna própria para a
+                    // segmentação da legenda. Registrá-la na descrição evita
+                    // perder o significado das cores sem trocar marca/cor.
+                    par.Second.DescricaoCompleta =
+                        $"{par.Second.DescricaoCompleta} - SEGMENTO: {par.First.SegmentacaoComercial}";
+                }
+            }
+
+            RegistrarExportacao(
+                $"ATUALIZACAO {tabela} {sufixoTabela} {produtosErp[0].Marca}",
+                produtosErp.Count,
+                arquivoSaida);
+            await _excelResumidoExporter.ExportarAsync(produtosErp, arquivoSaida);
+        }
+
+        _logger.LogInformation(
+            "Atualizacao resumida Del Credere Villagres concluida. Pasta={PastaSaida}; Auditoria={Auditoria}",
+            pastaAtualizacao,
+            caminhoAuditoria);
+    }
+
+    private static object CriarRelatorioAuditoriaDelcredere(
+        string caminhoArquivo,
+        IReadOnlyCollection<ProdutoNormalizado> produtosBrutos,
+        IReadOnlyCollection<ProdutoNormalizado> produtosVillagres)
+    {
+        var referenciasTodas = produtosBrutos
+            .GroupBy(produto => new { produto.Marca, produto.Referencia })
+            .Select(grupo => grupo.First())
+            .ToList();
+        var referenciasVillagres = produtosVillagres
+            .GroupBy(produto => produto.Referencia)
+            .Select(grupo => grupo.First())
+            .ToList();
+
+        return new
+        {
+            status = "SUCESSO",
+            processadoEm = DateTime.Now,
+            arquivoOrigem = caminhoArquivo,
+            auditoria = new
+            {
+                referenciasLidas = referenciasTodas.Count,
+                referenciasVillagres = referenciasVillagres.Count,
+                referenciasVillaArtExcluidasDaAtualizacao = referenciasTodas.Count(produto =>
+                    produto.Marca.Equals("VILLA ART", StringComparison.OrdinalIgnoreCase)),
+                referenciasDuplicadasVillagres = referenciasVillagres.Count -
+                    referenciasVillagres.Select(produto => produto.Referencia).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                precosInvalidosPorTabela = produtosVillagres
+                    .GroupBy(produto => produto.TabelaPreco)
+                    .OrderBy(grupo => grupo.Key)
+                    .ToDictionary(
+                        grupo => grupo.Key,
+                        grupo => grupo.Count(produto => produto.PrecoTabela <= 0m)),
+                calculosVendaInvalidosPorTabela = produtosVillagres
+                    .GroupBy(produto => produto.TabelaPreco)
+                    .OrderBy(grupo => grupo.Key)
+                    .ToDictionary(
+                        grupo => grupo.Key,
+                        grupo => grupo.Count(produto =>
+                            Math.Round(produto.PrecoTabela * 1.0536m, 2) != produto.PrecoVenda)),
+                registrosPorTabela = produtosVillagres
+                    .GroupBy(produto => produto.TabelaPreco)
+                    .OrderBy(grupo => grupo.Key)
+                    .ToDictionary(grupo => grupo.Key, grupo => grupo.Count()),
+                segmentacaoVisual = referenciasTodas
+                    .GroupBy(produto => string.IsNullOrWhiteSpace(produto.SegmentacaoComercial)
+                        ? "SEM SEGMENTACAO VISUAL"
+                        : produto.SegmentacaoComercial)
+                    .OrderBy(grupo => grupo.Key)
+                    .ToDictionary(grupo => grupo.Key, grupo => grupo.Count()),
+                segmentacaoVillagresNaDescricao = referenciasVillagres.Count(produto =>
+                    !string.IsNullOrWhiteSpace(produto.SegmentacaoComercial))
+            }
+        };
     }
 
     public async Task ProcessarVillaArtAsync(string caminhoArquivo)
@@ -270,6 +409,27 @@ public class ImportacaoService
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
 
         _logger.LogWarning("Arquivo Studio Morandin gerado como PROVISORIO; nao importar antes da homologacao fiscal e comercial.");
+    }
+
+    public async Task ProcessarAdamaAsync(string caminhoArquivo)
+    {
+        const string tabela = "ADAMA";
+        _logger.LogInformation("Iniciando importacao provisoria Adama. Arquivo={Arquivo}", caminhoArquivo);
+
+        var produtosErp = await _adamaReader.LerAsync(caminhoArquivo);
+        if (!produtosErp.Any())
+        {
+            _logger.LogWarning("Nenhum produto valido encontrado na tabela {Tabela}.", tabela);
+            return;
+        }
+
+        var arquivoSaida = CriarCaminhoSaida(
+            $"IMPORTACAO_ERP_ADAMA_PROVISORIA_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
+        await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
+
+        _logger.LogWarning(
+            "Arquivo Adama gerado como PROVISORIO; somente NCM e UF de origem estao confirmados.");
     }
 
     public async Task ProcessarInvitaAsync(string caminhoArquivo)

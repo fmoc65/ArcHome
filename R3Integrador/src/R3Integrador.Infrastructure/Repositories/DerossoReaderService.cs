@@ -8,6 +8,9 @@ namespace R3Integrador.Infrastructure.Repositories;
 public sealed class DerossoReaderService : IDerossoReader
 {
     private const string Marca = "DEROSSO";
+    private const string NcmContador = "69041000";
+    private const string UfOrigemContador = "SP";
+    private const string CsosnContador = "500";
 
     public Task<List<ProdutoErpDto>> LerAsync(string caminhoArquivo)
     {
@@ -20,9 +23,8 @@ public sealed class DerossoReaderService : IDerossoReader
         for (var row = 4; row <= ultimaLinha; row++)
         {
             var sku = worksheet.Cell(row, 3).GetString().Trim();
-            var ncm = SomenteDigitos(worksheet.Cell(row, 7).GetString());
 
-            if (string.IsNullOrWhiteSpace(sku) || ncm.Length != 8)
+            if (string.IsNullOrWhiteSpace(sku))
             {
                 continue;
             }
@@ -31,7 +33,6 @@ public sealed class DerossoReaderService : IDerossoReader
             var cor = NormalizarTexto(worksheet.Cell(row, 2).GetString());
             var unidade = NormalizarUnidade(worksheet.Cell(row, 4).GetString());
             var preco = LerDecimal(worksheet.Cell(row, 5));
-            var embalagensPorM2 = LerDecimal(worksheet.Cell(row, 13));
 
             produtos.Add(new ProdutoErpDto
             {
@@ -44,22 +45,37 @@ public sealed class DerossoReaderService : IDerossoReader
                 Linha = produto,
                 Modelo = NormalizarTexto(worksheet.Cell(row, 8).GetString()),
                 Cor = cor,
-                Ncm = ncm,
-                UfOrigem = string.Empty,
+                Ncm = NcmContador,
+                UfOrigem = UfOrigemContador,
                 // Preserva o preco unitario da origem nas duas colunas. Para revenda,
                 // a margem/markup ainda precisa ser homologada; para representacao,
                 // confirmar se o preco deve ser copiado diretamente.
                 PrecoVenda = preco,
                 PrecoFabrica = preco,
+                IpiPercentual = 0,
+                AliqIcmsOrigem = 12,
                 AliqIcmsInterna = 12,
                 Unidade = unidade,
-                QtdeEmbalagemVenda = CalcularEmbalagemVenda(unidade, embalagensPorM2),
+                QtdeEmbalagemVenda = CalcularEmbalagemVenda(unidade),
+                Cst = "010",
+                AliquotaCofinsCst = "01",
+                AliquotaIpiCst = "49",
+                AliquotaPisCst = "01",
+                Csosn = CsosnContador,
+                CfopDentro = "5405",
+                CfopFora = "6404",
                 PesoBruto = LerDecimal(worksheet.Cell(row, 11)),
                 QtdeEmbalagemCompra = 1,
                 PercentualSt = 0,
                 UnidFabril = unidade,
+                EnquadramentoIpi = "999",
+                AliquotaPisOrigem = "0,65",
+                AliquotaCofinsOrigem = "3",
                 EstoqueMinimo = 0,
                 EstoqueMaximo = 0,
+                AliquotaIbs = "0,1",
+                AliquotaCbs = "0,9",
+                ClassificacaoTributaria = "000001",
                 Observacao = CriarObservacao(worksheet, row, tipoTabela),
                 SituacaoCamposFiscais = CriarSituacaoCamposFiscais()
             });
@@ -67,7 +83,7 @@ public sealed class DerossoReaderService : IDerossoReader
 
         Console.WriteLine();
         Console.WriteLine($"[OK] {produtos.Count} produtos Derosso {tipoTabela} processados.");
-        Console.WriteLine("[ATENCAO] ICMS 12% e ausencia de ST sao premissas; demais campos fiscais aguardam contador.");
+        Console.WriteLine("[ATENCAO] CSOSN 500 foi informado pelo usuario. Revisar com o contador por causa da retirada do NCM 6904 da ST paulista em 01/01/2026.");
 
         return Task.FromResult(produtos);
     }
@@ -77,25 +93,25 @@ public sealed class DerossoReaderService : IDerossoReader
         return new Dictionary<int, SituacaoCampoFiscal>
         {
             [13] = SituacaoCampoFiscal.Confirmado,
+            [14] = SituacaoCampoFiscal.Confirmado,
+            [30] = SituacaoCampoFiscal.Confirmado,
+            [18] = SituacaoCampoFiscal.Estimado,
+            [19] = SituacaoCampoFiscal.Estimado,
             [20] = SituacaoCampoFiscal.Estimado,
+            [21] = SituacaoCampoFiscal.Estimado,
+            [26] = SituacaoCampoFiscal.Estimado,
+            [27] = SituacaoCampoFiscal.Estimado,
+            [28] = SituacaoCampoFiscal.Estimado,
+            [29] = SituacaoCampoFiscal.Estimado,
+            [31] = SituacaoCampoFiscal.Estimado,
+            [32] = SituacaoCampoFiscal.Estimado,
             [39] = SituacaoCampoFiscal.Estimado,
-            [18] = SituacaoCampoFiscal.Pendente,
-            [19] = SituacaoCampoFiscal.Pendente,
-            [21] = SituacaoCampoFiscal.Pendente,
-            [26] = SituacaoCampoFiscal.Pendente,
-            [27] = SituacaoCampoFiscal.Pendente,
-            [28] = SituacaoCampoFiscal.Pendente,
-            [29] = SituacaoCampoFiscal.Pendente,
-            [30] = SituacaoCampoFiscal.Pendente,
-            [31] = SituacaoCampoFiscal.Pendente,
-            [32] = SituacaoCampoFiscal.Pendente,
-            [51] = SituacaoCampoFiscal.Pendente,
-            [52] = SituacaoCampoFiscal.Pendente,
-            [53] = SituacaoCampoFiscal.Pendente,
-            [57] = SituacaoCampoFiscal.Pendente,
-            [58] = SituacaoCampoFiscal.Pendente,
-            [59] = SituacaoCampoFiscal.Pendente,
-            [60] = SituacaoCampoFiscal.Pendente
+            [51] = SituacaoCampoFiscal.Estimado,
+            [52] = SituacaoCampoFiscal.Estimado,
+            [53] = SituacaoCampoFiscal.Estimado,
+            [57] = SituacaoCampoFiscal.Estimado,
+            [58] = SituacaoCampoFiscal.Estimado,
+            [59] = SituacaoCampoFiscal.Estimado
         };
     }
 
@@ -110,7 +126,7 @@ public sealed class DerossoReaderService : IDerossoReader
         var pendenciaPreco = tipoTabela == "REVENDA"
             ? "regra de margem/markup da revenda pendente"
             : "regra comercial da representacao pendente";
-        return $"Derosso {tipoTabela} 01/05/2026 - {embalagem}, {pecasEmbalagem} pecas, embalagem {dimensaoEmbalagem} - Pecas/m2 parede: {pecasParede} - Pecas/m2 piso: {pecasPiso} - CEST 1002700/ST revogados em SP desde 01/01/2026 - {pendenciaPreco} - confirmar NCM, acabamento, ICMS e tributacao com contador";
+        return $"Derosso {tipoTabela} 01/05/2026 - {embalagem}, {pecasEmbalagem} pecas, embalagem {dimensaoEmbalagem} - Pecas/m2 parede: {pecasParede} - Pecas/m2 piso: {pecasPiso} - NCM 69041000 e origem SP informados - CSOSN 500 informado pelo usuario - CEST 1002700/ST retirados em SP desde 01/01/2026; revisar compatibilidade do CSOSN/CFOP com o contador - {pendenciaPreco}";
     }
 
     private static string ObterTipoTabela(string nomeAba, string titulo)
@@ -121,11 +137,9 @@ public sealed class DerossoReaderService : IDerossoReader
             : "REPRESENTACAO";
     }
 
-    private static decimal CalcularEmbalagemVenda(string unidade, decimal embalagensPorM2)
+    private static decimal CalcularEmbalagemVenda(string unidade)
     {
-        return unidade == "M2" && embalagensPorM2 > 0
-            ? Math.Round(1 / embalagensPorM2, 4)
-            : 1;
+        return unidade == "M2" ? 0 : 1;
     }
 
     private static string NormalizarUnidade(string valor)
@@ -144,6 +158,5 @@ public sealed class DerossoReaderService : IDerossoReader
             : DecimalParser.Parse(cell.GetFormattedString());
     }
 
-    private static string SomenteDigitos(string valor) => Regex.Replace(valor, @"\D", string.Empty);
     private static string NormalizarTexto(string valor) => Regex.Replace(valor.Trim(), @"\s+", " ").ToUpperInvariant();
 }

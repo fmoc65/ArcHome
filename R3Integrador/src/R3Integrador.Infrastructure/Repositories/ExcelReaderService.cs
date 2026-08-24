@@ -119,18 +119,31 @@ public class ExcelReaderService : IExcelReader
     private static void PreencherPrecos(ProdutoNormalizado produto, IXLWorksheet worksheet, int row, string tabela)
     {
         produto.PrecoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetString());
-        produto.PrecoTabela = DeveAplicarRegraRevenda(tabela)
+        if (tabela.Equals("VAREJO", StringComparison.OrdinalIgnoreCase))
+        {
+            produto.PrecoTabela = CalcularPrecoFinalVarejo(
+                produto.PrecoDesconto,
+                produto.Referencia);
+            produto.PrecoVenda = produto.PrecoTabela;
+            return;
+        }
+
+        produto.PrecoTabela = tabela.Equals("VINILICO", StringComparison.OrdinalIgnoreCase)
             ? CalcularCustoFinalRevenda(produto.PrecoDesconto)
             : ParseDecimal(worksheet.Cell(row, 18).GetString());
-        produto.PrecoVenda = DeveAplicarRegraRevenda(tabela)
+        produto.PrecoVenda = tabela.Equals("VINILICO", StringComparison.OrdinalIgnoreCase)
             ? CalcularPrecoVendaRevenda(produto.PrecoTabela)
             : ParseDecimal(worksheet.Cell(row, 20).GetString());
     }
 
-    private static bool DeveAplicarRegraRevenda(string tabela)
+    private static decimal CalcularPrecoFinalVarejo(decimal precoDesconto, string referencia)
     {
-        return tabela.Equals("VAREJO", StringComparison.OrdinalIgnoreCase) ||
-            tabela.Equals("VINILICO", StringComparison.OrdinalIgnoreCase);
+        const decimal percentualSt = 9.86m;
+        var percentualIpi = referencia.Equals("120003", StringComparison.OrdinalIgnoreCase)
+            ? 0m
+            : 0.65m;
+        var fator = 1m + percentualIpi / 100m + percentualSt / 100m;
+        return Math.Round(precoDesconto * fator, 2, MidpointRounding.AwayFromZero);
     }
 
     private static decimal CalcularCustoFinalRevenda(decimal precoDesconto)

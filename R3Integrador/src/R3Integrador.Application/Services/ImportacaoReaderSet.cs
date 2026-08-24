@@ -13,6 +13,7 @@ public sealed class ImportacaoReaderSet
     public required IRocaReader RocaReader { get; init; }
     public required IImersiReader ImersiReader { get; init; }
     public required IStudioMorandinReader StudioMorandinReader { get; init; }
+    public required IAdamaReader AdamaReader { get; init; }
     public required IInvitaReader InvitaReader { get; init; }
     public required IDerossoReader DerossoReader { get; init; }
     public required IAtlasReader AtlasReader { get; init; }

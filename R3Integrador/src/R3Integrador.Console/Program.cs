@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging; // Necessário para ClearProviders
 using R3Integrador.Application.Interfaces;
 using R3Integrador.Application.Services;
 using R3Integrador.Infrastructure.Export;
+using R3Integrador.Infrastructure.Persistence;
 using R3Integrador.Infrastructure.Repositories;
 using Serilog;
 
@@ -23,6 +24,8 @@ builder.Logging.ClearProviders();
 builder.Logging.AddSerilog();
 
 builder.Services.AddSingleton<IExcelReader, ExcelReaderService>();
+builder.Services.AddSingleton(new NinaFiscalParameters());
+builder.Services.AddSingleton<ICsosnService, CsosnService>();
 builder.Services.AddSingleton<IVinilicoReader, VinilicoReaderService>();
 builder.Services.AddSingleton<IDelcredereReader, DelcredereReaderService>();
 builder.Services.AddSingleton<IVillaArtReader, VillaArtReaderService>();
@@ -31,6 +34,7 @@ builder.Services.AddSingleton<IRubinettosReader, RubinettosReaderService>();
 builder.Services.AddSingleton<IRocaReader, RocaReaderService>();
 builder.Services.AddSingleton<IImersiReader, ImersiReaderService>();
 builder.Services.AddSingleton<IStudioMorandinReader, StudioMorandinReaderService>();
+builder.Services.AddSingleton<IAdamaReader, AdamaReaderService>();
 builder.Services.AddSingleton<IInvitaReader, InvitaReaderService>();
 builder.Services.AddSingleton<IDerossoReader, DerossoReaderService>();
 builder.Services.AddSingleton<IAtlasReader, AtlasReaderService>();
@@ -47,6 +51,7 @@ builder.Services.AddSingleton(sp => new ImportacaoReaderSet
     RocaReader = sp.GetRequiredService<IRocaReader>(),
     ImersiReader = sp.GetRequiredService<IImersiReader>(),
     StudioMorandinReader = sp.GetRequiredService<IStudioMorandinReader>(),
+    AdamaReader = sp.GetRequiredService<IAdamaReader>(),
     InvitaReader = sp.GetRequiredService<IInvitaReader>(),
     DerossoReader = sp.GetRequiredService<IDerossoReader>(),
     AtlasReader = sp.GetRequiredService<IAtlasReader>(),
@@ -55,9 +60,148 @@ builder.Services.AddSingleton(sp => new ImportacaoReaderSet
 });
 builder.Services.AddSingleton<ImportacaoService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExportService>();
+builder.Services.AddSingleton<IExcelResumidoExporter, ExcelResumidoExportService>();
 builder.Services.AddSingleton<RevisaoCamposFiscaisService>();
+builder.Services.AddSingleton<R3IntegradorDbInitializer>();
+builder.Services.AddSingleton<AtualizacaoPrecoFabricaService>();
+builder.Services.AddSingleton<VillagresDelcredereAtualizacaoService>();
+builder.Services.AddSingleton<AdamaAtualizacaoService>();
 
 var app = builder.Build();
+
+if (args.Length > 0 && args[0].Equals("--processar-adama-com-banco", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length is < 3 or > 5)
+    {
+        Console.Error.WriteLine(
+            "Uso: --processar-adama-com-banco <tabela-fornecedor.xlsx> <contador-ok.xlsx> [R3IntegradorDb.db] [pasta-saida]");
+        return;
+    }
+
+    var caminhoBanco = args.Length >= 4
+        ? args[3]
+        : Path.Combine(Directory.GetCurrentDirectory(), "R3IntegradorDb.db");
+    var pastaSaida = args.Length >= 5
+        ? args[4]
+        : Path.Combine(Directory.GetCurrentDirectory(), "Saida");
+    var resultado = await app.Services.GetRequiredService<AdamaAtualizacaoService>()
+        .ExecutarAsync(args[1], args[2], caminhoBanco, pastaSaida);
+
+    Console.WriteLine($"[OK] Produtos Adama validados: {resultado.ProdutosValidadosNoBanco}");
+    Console.WriteLine($"[OK] Produtos com preco corrigido: {resultado.ProdutosComPrecoCorrigido}");
+    Console.WriteLine($"[OK] Produtos com unidade corrigida: {resultado.ProdutosComUnidadeCorrigida}");
+    Console.WriteLine($"[OK] Atualizacao resumida dos produtos ja importados: {resultado.CaminhoPlanilhaAtualizacao}");
+    Console.WriteLine($"[OK] Base completa reservada para auditoria: {resultado.CaminhoPlanilhaCorrigida}");
+    Console.WriteLine($"[OK] Banco: {resultado.CaminhoBanco}");
+    Console.WriteLine($"[OK] Backup do banco: {resultado.CaminhoBackupBanco}");
+    Console.WriteLine($"[OK] Auditoria: {resultado.CaminhoAuditoria}");
+    return;
+}
+
+if (args.Length > 0 && args[0].Equals("--atualizar-preco-fabrica", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length is < 2 or > 4)
+    {
+        Console.Error.WriteLine(
+            "Uso: --atualizar-preco-fabrica <planilha.xlsx> [R3IntegradorDb.db] [pasta-saida]");
+        return;
+    }
+
+    var caminhoPlanilha = args[1];
+    var caminhoBanco = args.Length >= 3
+        ? args[2]
+        : Path.Combine(Directory.GetCurrentDirectory(), "R3IntegradorDb.db");
+    var pastaSaida = args.Length >= 4
+        ? args[3]
+        : Path.Combine(Directory.GetCurrentDirectory(), "Saida");
+
+    var resultado = await app.Services.GetRequiredService<AtualizacaoPrecoFabricaService>()
+        .ExecutarAsync(caminhoBanco, caminhoPlanilha, pastaSaida);
+
+    Console.WriteLine($"[OK] Precos atualizados no banco: {resultado.ProdutosAtualizadosNoBanco}");
+    Console.WriteLine($"[OK] Planilha de atualizacao: {resultado.CaminhoPlanilhaAtualizacao}");
+    Console.WriteLine($"[OK] Planilha de inclusao: {resultado.CaminhoPlanilhaInclusao}");
+    Console.WriteLine($"[OK] Referencias para inclusao: {string.Join(", ", resultado.ReferenciasParaInclusao)}");
+    return;
+}
+
+if (args.Length > 0 && args[0].Equals("--criar-banco", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length is < 2 or > 4)
+    {
+        Console.Error.WriteLine(
+            "Uso: --criar-banco <planilha.xlsx> [R3IntegradorDb.db] [tabela-origem]");
+        return;
+    }
+
+    var caminhoPlanilha = args[1];
+    var caminhoBanco = args.Length >= 3
+        ? args[2]
+        : Path.Combine(Directory.GetCurrentDirectory(), "R3IntegradorDb.db");
+    var tabelaOrigem = args.Length >= 4
+        ? args[3]
+        : InferirTabelaOrigem(caminhoPlanilha);
+
+    var resultado = app.Services.GetRequiredService<R3IntegradorDbInitializer>()
+        .CriarOuAtualizar(caminhoBanco, caminhoPlanilha, tabelaOrigem);
+
+    Console.WriteLine($"[OK] Banco: {resultado.CaminhoBanco}");
+    Console.WriteLine($"[OK] Origem: {resultado.TabelaOrigem} (aba {resultado.AbaPlanilha})");
+    Console.WriteLine($"[OK] Produtos importados: {resultado.ProdutosImportados}");
+    return;
+}
+
+if (args.Length > 0 && args[0].Equals("--atualizar-delcredere-com-banco", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length is < 2 or > 4)
+    {
+        Console.Error.WriteLine(
+            "Uso: --atualizar-delcredere-com-banco <tabela.xlsx> [R3IntegradorDb.db] [pasta-saida]");
+        return;
+    }
+
+    var caminhoPlanilha = args[1];
+    var caminhoBanco = args.Length >= 3
+        ? args[2]
+        : Path.Combine(Directory.GetCurrentDirectory(), "R3IntegradorDb.db");
+    var pastaSaida = args.Length >= 4
+        ? args[3]
+        : Path.Combine(Directory.GetCurrentDirectory(), "Saida");
+    var resultado = await app.Services.GetRequiredService<VillagresDelcredereAtualizacaoService>()
+        .ExecutarAsync(caminhoPlanilha, caminhoBanco, pastaSaida);
+
+    Console.WriteLine($"[OK] Pasta de saida: {resultado.PastaSaida}");
+    Console.WriteLine($"[OK] Referencias para atualizacao: {resultado.ReferenciasAtualizacao}");
+    Console.WriteLine($"[OK] Referencias para inclusao: {resultado.ReferenciasInclusao}");
+    Console.WriteLine($"[OK] Referencias do banco sem preco na nova tabela: {resultado.ReferenciasBancoAusentesNaTabela}");
+    Console.WriteLine($"[OK] Auditoria: {resultado.CaminhoAuditoria}");
+    return;
+}
+
+if (args.Length > 0 && args[0].Equals("--sincronizar-confirmados-erp", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length is < 2 or > 4)
+    {
+        Console.Error.WriteLine(
+            "Uso: --sincronizar-confirmados-erp <tabela.xlsx> [R3IntegradorDb.db] [pasta-saida]");
+        return;
+    }
+
+    var caminhoPlanilha = args[1];
+    var caminhoBanco = args.Length >= 3
+        ? args[2]
+        : Path.Combine(Directory.GetCurrentDirectory(), "R3IntegradorDb.db");
+    var pastaSaida = args.Length >= 4
+        ? args[3]
+        : Path.Combine(Directory.GetCurrentDirectory(), "Saida");
+    var resultado = await app.Services.GetRequiredService<VillagresDelcredereAtualizacaoService>()
+        .SincronizarConfirmadosNoErpAsync(caminhoPlanilha, caminhoBanco, pastaSaida);
+
+    Console.WriteLine($"[OK] Produtos sincronizados na replica local: {resultado.ProdutosInseridos}");
+    Console.WriteLine($"[OK] Backup: {resultado.CaminhoBackup}");
+    Console.WriteLine($"[OK] Referencias: {string.Join(", ", resultado.ReferenciasInseridas)}");
+    return;
+}
 
 Log.Information("Sistema integrado e motores de log prontos para uso.");
 bool executando = true;
@@ -94,7 +238,14 @@ while (executando)
     Console.WriteLine("   12 - Processar Planilha ATLAS REVENDA 35% (PROVISORIA)");
     Console.WriteLine("   13 - Processar Planilha NINA MARTINELLI (PROVISORIA)");
     Console.WriteLine("   14 - Processar TABELA ESPECIAL SL");
+    Console.WriteLine("   18 - Processar Planilha ADAMA (PROVISORIA)");
+    Console.WriteLine();
+    Console.WriteLine("  [REVISAO FISCAL]");
     Console.WriteLine("   15 - Sinalizar campos fiscais obrigatorios ausentes");
+    Console.WriteLine();
+    Console.WriteLine("  [ATUALIZAÇÕES DE PREÇO]");
+    Console.WriteLine("   16 - Atualização Del Credere Villagres (layout resumido)");
+    Console.WriteLine("   17 - Atualização e inclusão Del Credere Villagres pelo banco");
     Console.ForegroundColor = ConsoleColor.Red;
     Console.WriteLine("    0 - Sair");
     Console.ResetColor();
@@ -126,6 +277,7 @@ while (executando)
         case "12": await ExecutarAcaoAsync(() => importacaoService.ProcessarAtlasAsync(ObterCaminho("Digite ou arraste a tabela ATLAS:"))); break;
         case "13": await ExecutarAcaoAsync(() => importacaoService.ProcessarNinaMartinelliAsync(ObterCaminho("Digite ou arraste a tabela NINA MARTINELLI convertida para XLSX:"))); break;
         case "14": await ExecutarAcaoAsync(() => importacaoService.ProcessarSpecialSlAsync(ObterCaminho("Digite ou arraste o PDF ou XLSX TABELA ESPECIAL SL:"))); break;
+        case "18": await ExecutarAcaoAsync(() => importacaoService.ProcessarAdamaAsync(ObterCaminho("Digite ou arraste a tabela ADAMA:"))); break;
         case "15":
         {
             var resultado = app.Services.GetRequiredService<RevisaoCamposFiscaisService>()
@@ -135,6 +287,22 @@ while (executando)
             {
                 Console.WriteLine($"  - {campo}: {faltas} item(ns) sem preenchimento");
             }
+            break;
+        }
+        case "16":
+            await ExecutarAcaoAsync(() => importacaoService.ProcessarAtualizacaoDelcredereAsync(
+                ObterCaminho("Digite ou arraste a TABELA DELCREDERE VAREJO:")));
+            break;
+        case "17":
+        {
+            var caminhoTabela = ObterCaminho("Digite ou arraste a TABELA DELCREDERE VAREJO:");
+            var resultado = await app.Services.GetRequiredService<VillagresDelcredereAtualizacaoService>()
+                .ExecutarAsync(
+                    caminhoTabela,
+                    Path.Combine(Directory.GetCurrentDirectory(), "R3IntegradorDb.db"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "Saida"));
+            Console.WriteLine($"[OK] Atualizacao: {resultado.ReferenciasAtualizacao}; inclusao: {resultado.ReferenciasInclusao}.");
+            Console.WriteLine($"[OK] Auditoria: {resultado.CaminhoAuditoria}");
             break;
         }
         case "0": executando = false; break;
@@ -153,6 +321,20 @@ static string ObterCaminho(string prompt)
     Console.Write($"\n{prompt} ");
     var caminho = Console.ReadLine() ?? string.Empty;
     return caminho.Trim('"');
+}
+
+static string InferirTabelaOrigem(string caminhoPlanilha)
+{
+    var nomeArquivo = Path.GetFileNameWithoutExtension(caminhoPlanilha).ToUpperInvariant();
+    foreach (var origem in new[] { "VAREJO", "VINILICO", "LASTRA" })
+    {
+        if (nomeArquivo.Contains(origem, StringComparison.Ordinal))
+        {
+            return origem;
+        }
+    }
+
+    return "IMPORTACAO_ERP";
 }
 
 static async Task ExecutarAcaoAsync(Func<Task> acao)

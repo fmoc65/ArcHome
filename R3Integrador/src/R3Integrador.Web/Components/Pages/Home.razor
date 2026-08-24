@@ -63,6 +63,7 @@
         new("delcredere", "Del Credere Varejo", "Tabela de preços com planilha de alíquotas complementar.", ".xlsx", "Excel (.xlsx)", true), new("villaart", "Villa Art — Boutique", "Leitura dedicada para Villa Art.", ".xlsx", "Excel (.xlsx)", false),
         new("rubinetto", "Rubinettos", "Gera arquivos separados por marca.", ".xlsx", "Excel (.xlsx)", false), new("roca", "Roca / Celite", "Gera arquivos separados por marca.", ".xlsx", "Excel (.xlsx)", false),
         new("imersi", "Imersi", "Gera arquivos separados por tabela de preço.", ".xlsx", "Excel (.xlsx)", false), new("studio", "Studio Morandin", "Processamento provisório — valide antes de importar no ERP.", ".xlsx", "Excel (.xlsx)", false),
+        new("adama", "Adama", "Representação com compra e venda iguais ao PREÇO 2026 do fornecedor.", ".xlsx", "Excel (.xlsx)", false),
         new("invita", "Invita", "Processamento provisório — valide antes de importar no ERP.", ".xlsx", "Excel (.xlsx)", false), new("derosso", "Derosso", "Processamento provisório — identifica Revenda ou Representação.", ".xlsx", "Excel (.xlsx)", false),
         new("atlas", "Atlas Revenda 35%", "Processamento provisório — valide antes de importar no ERP.", ".xlsx", "Excel (.xlsx)", false), new("nina", "Nina Martinelli", "Tabela com regras tributárias informadas pelo contador.", ".xlsx", "Excel (.xlsx)", false),
         new("sl", "Tabela Especial SL", "Aceita a tabela especial em Excel ou PDF.", ".xlsx,.pdf", "Excel (.xlsx) ou PDF", false)
@@ -90,6 +91,7 @@
         "varejo" => ImportacaoService.ProcessarPadraoAsync(arquivo, "VAREJO"), "vinilico" => ImportacaoService.ProcessarVinilicoAsync(arquivo), "lastra" => ImportacaoService.ProcessarLastraAsync(arquivo),
         "delcredere" => ImportacaoService.ProcessarDelcredereAsync(arquivo, complementar), "villaart" => ImportacaoService.ProcessarVillaArtAsync(arquivo), "rubinetto" => ImportacaoService.ProcessarRubinettosAsync(arquivo),
         "roca" => ImportacaoService.ProcessarRocaAsync(arquivo), "imersi" => ImportacaoService.ProcessarImersiAsync(arquivo), "studio" => ImportacaoService.ProcessarStudioMorandinAsync(arquivo),
+        "adama" => ImportacaoService.ProcessarAdamaAsync(arquivo),
         "invita" => ImportacaoService.ProcessarInvitaAsync(arquivo), "derosso" => ImportacaoService.ProcessarDerossoAsync(arquivo), "atlas" => ImportacaoService.ProcessarAtlasAsync(arquivo),
         "nina" => ImportacaoService.ProcessarNinaMartinelliAsync(arquivo), "sl" => ImportacaoService.ProcessarSpecialSlAsync(arquivo), _ => Task.CompletedTask
     };

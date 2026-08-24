@@ -16,6 +16,8 @@ builder.Host.UseSerilog();
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
 builder.Services.AddSingleton<IExcelReader, ExcelReaderService>();
+builder.Services.AddSingleton(new NinaFiscalParameters());
+builder.Services.AddSingleton<ICsosnService, CsosnService>();
 builder.Services.AddSingleton<IVinilicoReader, VinilicoReaderService>();
 builder.Services.AddSingleton<IDelcredereReader, DelcredereReaderService>();
 builder.Services.AddSingleton<IVillaArtReader, VillaArtReaderService>();
@@ -24,6 +26,7 @@ builder.Services.AddSingleton<IRubinettosReader, RubinettosReaderService>();
 builder.Services.AddSingleton<IRocaReader, RocaReaderService>();
 builder.Services.AddSingleton<IImersiReader, ImersiReaderService>();
 builder.Services.AddSingleton<IStudioMorandinReader, StudioMorandinReaderService>();
+builder.Services.AddSingleton<IAdamaReader, AdamaReaderService>();
 builder.Services.AddSingleton<IInvitaReader, InvitaReaderService>();
 builder.Services.AddSingleton<IDerossoReader, DerossoReaderService>();
 builder.Services.AddSingleton<IAtlasReader, AtlasReaderService>();
@@ -35,12 +38,14 @@ builder.Services.AddSingleton(sp => new ImportacaoReaderSet
     DelcredereReader = sp.GetRequiredService<IDelcredereReader>(), VillaArtReader = sp.GetRequiredService<IVillaArtReader>(),
     LastraReader = sp.GetRequiredService<ILastraReader>(), RubinettosReader = sp.GetRequiredService<IRubinettosReader>(),
     RocaReader = sp.GetRequiredService<IRocaReader>(), ImersiReader = sp.GetRequiredService<IImersiReader>(),
-    StudioMorandinReader = sp.GetRequiredService<IStudioMorandinReader>(), InvitaReader = sp.GetRequiredService<IInvitaReader>(),
+    StudioMorandinReader = sp.GetRequiredService<IStudioMorandinReader>(), AdamaReader = sp.GetRequiredService<IAdamaReader>(),
+    InvitaReader = sp.GetRequiredService<IInvitaReader>(),
     DerossoReader = sp.GetRequiredService<IDerossoReader>(), AtlasReader = sp.GetRequiredService<IAtlasReader>(),
     NinaMartinelliReader = sp.GetRequiredService<INinaMartinelliReader>(), SpecialSlReader = sp.GetRequiredService<ISpecialSlReader>()
 });
 builder.Services.AddSingleton<ImportacaoService>();
 builder.Services.AddSingleton<IExcelExporter, ExcelExportService>();
+builder.Services.AddSingleton<IExcelResumidoExporter, ExcelResumidoExportService>();
 builder.Services.AddSingleton<RevisaoCamposFiscaisService>();
 builder.Services.AddSingleton<HistoricoAtualizacaoStore>();
 

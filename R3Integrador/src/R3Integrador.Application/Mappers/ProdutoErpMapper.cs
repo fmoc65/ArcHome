@@ -36,7 +36,7 @@ public static class ProdutoErpMapper
             FreteReais = 0,
             FretePercentual = 0,
             Unidade = "M2",
-            QtdeEmbalagemVenda = ObterM2PorCaixa(produto),
+            QtdeEmbalagemVenda = 0,
             
             Cst = ObterCst(produto),
             AliquotaCofinsCst = "01",
@@ -173,11 +173,6 @@ public static class ProdutoErpMapper
         return produto.Grupo.Equals("PORCELANATO", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static decimal ObterM2PorCaixa(ProdutoNormalizado produto)
-    {
-        return produto.M2Caixa > 0 ? produto.M2Caixa : 1;
-    }
-
     private static string GerarDescricao(ProdutoNormalizado produto)
     {
         var descricao = $"{produto.Grupo} {produto.Linha} {produto.SubGrupo} {produto.Cor} {produto.Modelo}";
@@ -207,5 +202,4 @@ public static class ProdutoErpMapper
     }
 
 }
-
 

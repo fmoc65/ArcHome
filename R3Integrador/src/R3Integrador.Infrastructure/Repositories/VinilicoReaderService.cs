@@ -9,15 +9,17 @@ namespace R3Integrador.Infrastructure.Repositories;
 public class VinilicoReaderService : IVinilicoReader
 {
     private const string NomeAba = "VINILICO";
+    private const string NomeAbaAlternativa = "VAREJO";
 
     public async Task<List<ProdutoNormalizado>> LerAsync(string caminhoArquivo)
     {
         var produtos = new List<ProdutoNormalizado>();
         using var workbook = new XLWorkbook(caminhoArquivo);
 
-        if (!workbook.TryGetWorksheet(NomeAba, out var worksheet))
+        if (!workbook.TryGetWorksheet(NomeAba, out var worksheet) &&
+            !workbook.TryGetWorksheet(NomeAbaAlternativa, out worksheet))
         {
-            Console.WriteLine($"Aba {NomeAba} nao encontrada.");
+            Console.WriteLine($"Abas {NomeAba} e {NomeAbaAlternativa} nao encontradas.");
             return produtos;
         }
 
@@ -26,7 +28,7 @@ public class VinilicoReaderService : IVinilicoReader
 
         for (var row = 1; row <= ultimaLinha; row++)
         {
-            var referencia = worksheet.Cell(row, 2).GetString().Trim();
+            var referencia = NormalizarReferencia(worksheet.Cell(row, 2).GetString());
 
             if (string.IsNullOrWhiteSpace(referencia) || EhLinhaDeCabecalho(referencia))
             {
@@ -34,8 +36,8 @@ public class VinilicoReaderService : IVinilicoReader
             }
 
             estado.Atualizar(worksheet, row);
-            var precoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetString());
-            var custoFinal = CalcularCustoFinalRevenda(precoDesconto);
+            var precoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetFormattedString());
+            var precoFinal = CalcularPrecoFinal(precoDesconto);
 
             produtos.Add(new ProdutoNormalizado
             {
@@ -55,9 +57,9 @@ public class VinilicoReaderService : IVinilicoReader
                 M2Caixa = estado.M2Caixa,
                 Espessura = estado.Espessura,
                 PesoBrutoM2 = estado.PesoBrutoM2,
-                PrecoTabela = custoFinal,
+                PrecoTabela = precoFinal,
                 PrecoDesconto = precoDesconto,
-                PrecoVenda = CalcularPrecoVendaRevenda(custoFinal)
+                PrecoVenda = precoFinal
             });
         }
 
@@ -92,6 +94,11 @@ public class VinilicoReaderService : IVinilicoReader
         return builder.ToString().Normalize(NormalizationForm.FormC);
     }
 
+    private static string NormalizarReferencia(string valor)
+    {
+        return valor.Replace("***", string.Empty, StringComparison.Ordinal).Trim();
+    }
+
     private static decimal ParseDecimal(string valor)
     {
         return DecimalParser.Parse(valor);
@@ -118,14 +125,11 @@ public class VinilicoReaderService : IVinilicoReader
         return superficie.ToUpper();
     }
 
-    private static decimal CalcularCustoFinalRevenda(decimal precoDesconto)
+    private static decimal CalcularPrecoFinal(decimal precoDesconto)
     {
-        return Math.Round(precoDesconto * 1.1051m + 1.50m, 2);
-    }
-
-    private static decimal CalcularPrecoVendaRevenda(decimal custoFinal)
-    {
-        return Math.Round(custoFinal * 1.75m, 2);
+        const decimal percentualStVinilico = 7.92m;
+        var fator = 1m + percentualStVinilico / 100m;
+        return Math.Round(precoDesconto * fator, 2, MidpointRounding.AwayFromZero);
     }
 
     private sealed class LinhaVinilico

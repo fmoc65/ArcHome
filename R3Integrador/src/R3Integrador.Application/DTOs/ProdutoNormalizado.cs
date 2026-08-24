@@ -8,6 +8,9 @@ public class ProdutoNormalizado
     public string Linha { get; set; } = string.Empty;
     public string Colecao { get; set; } = string.Empty;
     public string Cor { get; set; } = string.Empty;
+    // Segmentação comercial indicada visualmente nas colunas B/C da tabela
+    // Del Credere (Villa Premium, Exclusive, Max, Style ou Villa Art).
+    public string SegmentacaoComercial { get; set; } = string.Empty;
     public string Superficie { get; set; } = string.Empty;
     public string Grupo { get; set; } = string.Empty;
     public string SubGrupo { get; set; } = string.Empty;

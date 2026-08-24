@@ -92,8 +92,7 @@ public sealed class AtlasReaderService : IAtlasReader
             LerDecimal(worksheet.Cell(row, 9)),
             LerDecimal(worksheet.Cell(row, 10)),
             ipi,
-            percentualSt,
-            $"Codigo Atlas: {worksheet.Cell(row, 1).GetString().Trim()} - Placas/caixa: {worksheet.Cell(row, 6).GetFormattedString()} - Dimensao placa: {worksheet.Cell(row, 7).GetFormattedString()} - Area placa: {worksheet.Cell(row, 8).GetFormattedString()} - m2/pallet: {worksheet.Cell(row, 11).GetFormattedString()}");
+            percentualSt);
     }
 
     private static ProdutoErpDto? MapearLinhaEspecial(
@@ -128,14 +127,13 @@ public sealed class AtlasReaderService : IAtlasReader
             1,
             LerDecimal(worksheet.Cell(row, 8)),
             ipi,
-            percentualSt,
-            $"Pecas/caixa: {worksheet.Cell(row, 6).GetFormattedString()} - Pecas/metro linear: {worksheet.Cell(row, 7).GetFormattedString()} - Cores: {cores}");
+            percentualSt);
     }
 
     private static ProdutoErpDto CriarProduto(
         string referencia, string ean, string descricao, string secao, string formato,
         string cor, string ncm, decimal preco, string unidade, decimal embalagemVenda,
-        decimal pesoBruto, decimal ipi, decimal percentualSt, string detalhe)
+        decimal pesoBruto, decimal ipi, decimal percentualSt)
     {
         return new ProdutoErpDto
         {
@@ -159,14 +157,14 @@ public sealed class AtlasReaderService : IAtlasReader
             IpiPercentual = ipi,
             Iva = percentualSt > 0 ? 81 : 0,
             Unidade = unidade,
-            QtdeEmbalagemVenda = embalagemVenda > 0 ? embalagemVenda : 1,
+            QtdeEmbalagemVenda = unidade == "M2" ? 0 : embalagemVenda > 0 ? embalagemVenda : 1,
             PesoBruto = pesoBruto,
             QtdeEmbalagemCompra = 1,
             PercentualSt = percentualSt,
             UnidFabril = unidade,
             EstoqueMinimo = 0,
             EstoqueMaximo = 0,
-            Observacao = $"Atlas revenda 35% maio/2026 - {detalhe} - NCM/IPI/ST informados pela secao da origem - regra de preco e demais tributos pendentes",
+            Observacao = string.Empty,
             SituacaoCamposFiscais = CriarSituacaoCamposFiscais(percentualSt)
         };
     }

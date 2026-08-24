@@ -40,6 +40,9 @@ public class VillaArtReaderService : IVillaArtReader
 
             estado.Atualizar(worksheet, row);
 
+            var precoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetFormattedString());
+            var precoFinal = CalcularPrecoFinal(precoDesconto, referencia);
+
             produtos.Add(new ProdutoNormalizado
             {
                 TipoTabela = NomeAba,
@@ -58,9 +61,9 @@ public class VillaArtReaderService : IVillaArtReader
                 M2Caixa = estado.M2Caixa,
                 Espessura = estado.Espessura,
                 PesoBrutoM2 = estado.PesoBrutoM2,
-                PrecoDesconto = ParseDecimal(worksheet.Cell(row, 19).GetFormattedString()),
-                PrecoTabela = ParseDecimal(worksheet.Cell(row, 19).GetFormattedString()),
-                PrecoVenda = ParseDecimal(worksheet.Cell(row, 20).GetFormattedString())
+                PrecoDesconto = precoDesconto,
+                PrecoTabela = precoFinal,
+                PrecoVenda = precoFinal
             });
         }
 
@@ -97,6 +100,16 @@ public class VillaArtReaderService : IVillaArtReader
     private static decimal ParseDecimal(string valor)
     {
         return DecimalParser.Parse(valor);
+    }
+
+    private static decimal CalcularPrecoFinal(decimal precoDesconto, string referencia)
+    {
+        const decimal percentualSt = 9.86m;
+        var percentualIpi = referencia.Equals("120003", StringComparison.OrdinalIgnoreCase)
+            ? 0m
+            : 0.65m;
+        var fator = 1m + percentualIpi / 100m + percentualSt / 100m;
+        return Math.Round(precoDesconto * fator, 2, MidpointRounding.AwayFromZero);
     }
 
     private static int ParseInt(string valor)
