@@ -1,6 +1,6 @@
 # Contexto do projeto R3Integrador
 
-Última atualização: 12/08/2026.
+Última atualização: 01/09/2026.
 
 Este arquivo é o ponto de retomada do trabalho realizado no projeto. Ele reúne
 as regras de negócio confirmadas, fontes de dados, decisões de implementação,
@@ -346,13 +346,14 @@ Referência oficial usada para a semântica dos códigos:
 - Para `M2`, embalagem de venda `0`.
 - O preço de representação da origem foi preservado, pelo comportamento atual,
   tanto como preço de venda quanto como preço de fábrica.
-- Quatro referências técnicas determinísticas foram criadas para códigos
-  repetidos ou para a descrição `depende do raio`.
-- Todas as 1.141 referências da saída são únicas.
+- Quatro produtos cuja origem informa `depende do raio` não possuem código de
+  fábrica; o campo deve permanecer vazio, sem criar referência a partir da
+  descrição.
+- Os outros 1.137 códigos de fábrica são únicos.
 
 Saída definitiva mais recente:
 
-- `Saida/IMPORTACAO_ERP_NINA_MARTINELLI_IMPOSTOS_CONTADOR_20260810_215759.xlsx`
+- `Saida/IMPORTACAO_ERP_NINA_MARTINELLI_IMPOSTOS_CONTADOR_20260831_201659.xlsx`
 
 QA da saída:
 
@@ -360,18 +361,36 @@ QA da saída:
 - 60 colunas;
 - XLSX íntegro;
 - nenhuma fórmula;
-- nenhuma referência duplicada;
+- nenhuma referência preenchida duplicada;
 - 736 produtos `M2`, todos com embalagem de venda `0`;
 - 396 produtos `PC` e 9 produtos `LT`, com embalagem de venda `1`;
 - todas as linhas com UF `SP`, IPI `0.0065`, ICMS origem/saída `0.12`, MVA
   `0.81`, PIS origem `0.0165`, COFINS origem `0.076`, ST `0` e CSOSN `102`.
+- NCM `69072300`: 386 produtos cerâmicos;
+- NCM `68101900`: 746 produtos cimentícios;
+- NCM `38099390`: 9 produtos da família de impermeabilizantes;
+- coluna `OBSERVACAO` vazia em todos os 1.141 produtos;
+- nenhuma fórmula e nenhum código de fábrica preenchido duplicado.
+
+NCMs Nina informados posteriormente:
+
+- produtos cerâmicos da Nina Martinelli: `69072300`;
+- produtos cimentícios da Nina Martinelli Revestimentos: `68101900`;
+- impermeabilizantes, independentemente da empresa: `38099390`;
+- famílias de códigos `154`, `158` e `159`: cimentícios;
+- família `157`/aplicação `QUIMICO`: impermeabilizantes;
+- demais famílias: cerâmicos;
+- os quatro produtos com a indicação textual `depende do raio`, pertencentes à
+  linha Verano, são cimentícios e ficam com `CODIGOFABRICA` vazio.
 
 Pendências Nina:
 
-- NCM, CST, CFOP dentro e CFOP fora permanecem vazios porque não foram
-  fornecidos para Nina.
+- CST, CFOP dentro e CFOP fora permanecem vazios porque não foram fornecidos
+  para Nina.
 - Não inventar esses campos; solicitar/homologar antes de considerar a planilha
   fiscalmente completa.
+- A coluna `OBSERVACAO` deve permanecer vazia, assim como em todas as demais
+  tabelas geradas pelo integrador.
 - O menu ainda chama o fluxo de `PROVISORIA`, coerente com essas pendências.
 
 ## 8. Arquivos e saídas que não devem ser confundidos
@@ -384,8 +403,9 @@ Pendências Nina:
   fornecedor com timestamps diferentes.
 - Para VillaCol, usar `VILLACOL_PROCESSADO_20260810_REVISAO_2`, não a primeira
   execução sem o sufixo de revisão.
-- Para Nina, usar o arquivo com timestamp `20260810_215759`, não o teste anterior
-  `20260810_215507`.
+- Para Nina, usar o arquivo com timestamp `20260831_201659`; a saída anterior
+  criava códigos técnicos para os quatro produtos informados na origem como
+  `depende do raio`.
 
 ## 9. Princípios operacionais para próximas alterações
 
@@ -736,3 +756,394 @@ exatamente a marca `VILLAGRES <faixa>` em suas 222 linhas; cada importação
 Villagres possui 25 itens `VILLAGRES <faixa>` e cada importação Villa Art possui
 24 itens `VILLA ART <faixa>`. Todos os 24 arquivos XLSX foram verificados como
 íntegros.
+
+## 12. WhatsApp ARC HOME - TI e situação operacional em 01/09/2026
+
+Fonte desta atualização:
+
+- `/home/fernando/Documentos/ArcHome/ARC-HOME-TI-chat-20260901.html`;
+- exportação com 46 mensagens entre 19/08/2026 e 01/09/2026;
+- as mensagens e capturas foram confrontadas com o código, as planilhas em
+  `Saida/`, os arquivos recebidos em `Planilhas/Moreira` e o SQLite.
+
+Participantes e papéis, para evitar confusão entre os dois Fernandos:
+
+- Mônica: analista do ERP;
+- Fernando / Escritório Moreira: contador;
+- Ana Carolina Salvatti e Regina Carvajal: clientes;
+- Fernando Costa: desenvolvedor deste integrador.
+
+Esta seção é a fotografia operacional mais recente. Quando houver conflito
+com uma classificação anterior deste documento, ela prevalece para decidir o
+que ainda pode ser enviado ao ERP. As seções anteriores continuam válidas como
+histórico técnico das execuções.
+
+### 12.1 Mensagens do WhatsApp, em ordem cronológica
+
+#### 19/08/2026
+
+- 13:06 — Ana: esclareceu que o arquivo chamado de “preços recalculados” era a
+  tabela Villa Art.
+- 14:22 — Ana: perguntou se a tabela de revenda de vinílico deveria ser
+  atualizada pela tabela `003` de 01/05/2026 e informou que ainda faltavam as
+  tabelas Del Credere de vinílico.
+- 14:32 — Ana: apontou em uma captura a coluna `Preço Lojista Impostos` e
+  autorizou seu uso, informando que ela já continha o imposto de compra. Os
+  valores visíveis incluem `2.939`, `3.358`, `2.011`, `3.986`, `3.492`, `4.881`
+  e `3.332`. A captura isolada não identifica com segurança o fornecedor ou o
+  arquivo; não aplicar a regra a outra tabela sem vincular a imagem à fonte.
+- 17:15 — Ana: relatou que a contabilidade dizia já ter devolvido todas as
+  planilhas que estavam em validação e não ter mais pendências.
+- 17:16 — Ana: listou como pendentes Kromma (CSOSN inválida), Rubinettos
+  (CSOSN inválida), Atlas (CST COFINS inválida), Nina Martinelli, Studio
+  Morandin, Invita e rodapé Villagres.
+- 17:17 — Ana: informou que a tabela de revenda Villa Art ainda não possuía
+  uma versão para importação; o arquivo havia sido feito no layout resumido,
+  mas deveria estar no layout completo.
+- 21:48 — Fernando Costa: explicou que parte das planilhas voltou do contador
+  justamente por divergências na importação e que Nina Martinelli, rodapé e
+  Studio Morandin ainda não tinham retornado para uma tentativa de carga.
+- 21:49 — Fernando Costa: informou que alinharia com o contador o envio direto
+  dos retornos às clientes, para eliminar dúvidas sobre o que foi recebido.
+
+#### 20/08/2026
+
+- 11:01 — Ana: pediu o envio da Villa Art em layout de importação.
+- 11:02 — Ana: relatou divergência nos pesos; o exemplo informado foi um
+  produto de 63 kg cadastrado com 20 kg.
+
+#### 21 a 25/08/2026
+
+- 21/08 16:36 — Fernando Costa: propôs revisar presencialmente as pendências.
+- 24/08 18:15 — Ana: perguntou se houve conversa com Fernando do escritório
+  Moreira.
+- 25/08 11:08 — Ana: enviou uma atualização de preços do mês `07/26`.
+- 25/08 11:17 — Ana: determinou que, como Nina ainda não havia sido importada,
+  a nova tabela deveria substituir a anterior.
+- 25/08 13:22 — Ana: especificou as seis faixas faltantes de vinílico:
+  `DEL5`, `DEL10`, `DEL15`, `DEL20`, `DEL25` e `DEL30`.
+
+O anexo de preços `07/26` não foi incorporado como XLSX na exportação HTML
+e não foi localizado nos diretórios auditados. Portanto, a saída Nina de
+31/08 ainda usa a fonte `REV02` anterior e não atende a essa substituição.
+
+#### 27 a 29/08/2026
+
+- 27/08 — Regina: cobrou o andamento e encaminhou conversa com o contador. Na
+  captura, o contador pediu o reenvio de todas as planilhas consideradas
+  tributariamente prontas, para reconciliar o que estava com ele e o que dera
+  erro ao subir no ERP. A captura mostra o início desse reenvio por Adama.
+- 28/08 15:23 — Ana: destacou a referência `920008`, linha COPAN.
+- 28/08 15:25 — Regina: pediu a memória do cálculo dos valores carregados para
+  COPAN e esclarecimento sobre o preço médio apresentado pelo ERP.
+- 28/08 16:02 — Ana: informou a causa identificada por Mônica: na importação
+  completa foi usado `preço de tabela` junto com um desconto; na atualização
+  foi usado `preço com desconto`, mas o ERP preservou o desconto anterior e o
+  aplicou novamente.
+- 29/08 13:07 — Fernando Costa: informou que as planilhas haviam sido enviadas
+  pelo contador, mas ainda não tinham sido revisadas.
+
+A captura do ERP referente à COPAN mostra a referência `920027`, descrição
+`PORCELANATO COPAN EXTERNO BEIGE 92X92`, com entrada utilizada de R$ 68,00,
+desconto de 11,56%, IPI de 0,65%, ST de R$ 5,93 / 9,80%, custo final de
+R$ 66,46 e venda de R$ 112,98. A mensagem textual cita `920008`. Tratar ambas
+as referências como casos de teste, sem presumir que a captura seja da mesma
+referência citada no texto.
+
+#### 01/09/2026 e capturas encaminhadas pelo desenvolvedor
+
+- 13:30 — Ana: cobrou nova posição sobre a evolução das tabelas.
+- 18:40 — Fernando Costa: informou que havia recebido mensagens do contador,
+  mas nenhum arquivo de volta naquela conversa, e que retransmitiria os pontos
+  para decisão das clientes.
+- Captura Nina: Fernando Costa perguntou pela validação e observou que o NCM
+  já havia sido informado. O contador pediu o envio das planilhas com NCM; a
+  captura mostra Nina e Studio sendo encaminhadas a ele.
+- Capturas Adama: o contador indicou enquadramentos que ainda dependiam de
+  confirmação do fornecedor. Registrou que não é possível conhecer o regime do
+  fornecedor sem informação dele e orientou validar com o fornecedor os casos
+  duvidosos antes da importação. Fernando Costa pediu que essa decisão
+  tributária fosse passada diretamente à Regina e que eventual NF-e de teste
+  fosse cancelada se necessário.
+
+Conclusão documental: “o contador devolveu” não equivale automaticamente a
+“aprovado e pronto para importar”. Há arquivos devolvidos com erros do ERP,
+arquivos ainda provisórios e pontos que o próprio contador remeteu ao
+fornecedor/cliente para decisão.
+
+### 12.2 O que está feito e comprovado no repositório
+
+- A solução compila em 01/09/2026 com zero erros e zero avisos usando
+  `dotnet build R3Integrador.slnx --no-restore -m:1`.
+- A arquitetura possui leitores específicos para os fornecedores citados e
+  separa layout completo de importação e layout resumido de atualização.
+- O fluxo de revenda de vinílico leu a tabela `003`, gerou 16 inclusões
+  validadas pelo contador e carregou a origem `VINILICO` no SQLite.
+- A base completa interna de Villa Art possui as 25 referências da fonte e os
+  campos fiscais usados no processamento de 17/08.
+- Nina possui implementação dos três NCMs confirmados, 1.141 itens, observação
+  vazia e quatro códigos `depende do raio` mantidos vazios. A saída mais recente
+  é `IMPORTACAO_ERP_NINA_MARTINELLI_IMPOSTOS_CONTADOR_20260831_201659.xlsx`.
+- O exportador foi alterado para deixar `OBSERVACAO` vazia em todas as futuras
+  planilhas completas.
+- Existem retornos locais do contador para Kromma, Rubinettos, Atlas, Studio,
+  Invita, Nina, Adama e rodapé. A presença do arquivo é evidência de recebimento,
+  não de aprovação final.
+- A réplica SQLite contém as origens `ADAMA`, `ATLAS_REVENDA_35`, `VAREJO`,
+  `VINILICO`, seis faixas VillaCol e `VILLACOL_REVENDA`. Kromma, Rubinettos,
+  Nina, Studio, Invita, rodapé e os Del Credere de vinílico ainda não constam
+  como origens carregadas.
+
+### 12.3 Pendências e falhas confirmadas
+
+#### Bloqueadores de importação
+
+1. **Desconto aplicado duas vezes no ERP.** O diagnóstico de Mônica confere com
+   os arquivos e o código. O mapper calcula e grava `DESCONTO %` nas importações
+   completas; as atualizações resumidas enviam um preço já calculado sobre a
+   coluna com desconto, mas não possuem campo para zerar o desconto existente
+   no ERP. Exemplos atuais: a base Villa Art conserva desconto de 9,51%/9,52%
+   e a importação de vinílico conserva 7,34%. Não reenviar atualizações de
+   preço afetadas antes de decidir com Mônica se o ERP deve ter o desconto
+   zerado ou se o arquivo deve enviar um preço-base compatível com o desconto
+   persistido.
+2. **Peso por m² usado como peso da embalagem.** `ExcelReaderService`,
+   `VillaArtReaderService` e `VinilicoReaderService` leem a coluna 15
+   (`peso bruto/m2`) e o mapper a exporta como `PESOBRUTO`. A fonte também possui
+   a coluna 16 (`peso bruto/cx`), que explica o caso reportado de 20,8 kg versus
+   63 kg. Na tabela 001, as 250 referências têm peso/m² diferente do peso/caixa.
+   Confirmar com Mônica a semântica de `PESOBRUTO` e, sendo peso da caixa,
+   corrigir e regenerar Varejo, Villa Art e vinílico.
+3. **Villa Art revenda ainda não está entregue no formato pedido.** A base
+   completa interna tem 25 itens, mas o arquivo operacional de importação
+   completa possui somente a referência `123052`; os outros 24 ficaram no
+   layout resumido. A mensagem de Ana exige a tabela de revenda em layout
+   completo. O status anterior baseado apenas no SQLite não resolve essa
+   confirmação do ERP/cliente.
+4. **Nina de julho/2026 ausente.** A planilha anexada em 25/08 não foi localizada.
+   A saída de 31/08 foi gerada com a `REV02` antiga. Mesmo essa saída permanece
+   sem CST, CST de IPI/PIS/COFINS e CFOP dentro/fora; não deve ser tratada como
+   fiscalmente completa.
+5. **Vinílico Del Credere ausente.** Não existe fonte/saída identificada para
+   `DEL5`, `DEL10`, `DEL15`, `DEL20`, `DEL25` e `DEL30`. O fluxo Del Credere
+   atual é o de Villagres/Villa Art cerâmico e não implementa automaticamente
+   essas seis tabelas de vinílico.
+6. **Rodapé Villagres bloqueado.** O arquivo local tem 13 itens e está nomeado
+   `NAO_SUBIR...SEM NCM`; unidade, NCM, CST/CSOSN, CFOP e tributação permanecem
+   vazios. Não importar até resposta fiscal e confirmação da unidade.
+
+#### Retornos fiscais que ainda exigem correção ou nova tentativa controlada
+
+- Kromma: 3.430 linhas; o arquivo recebido usa `CSOSN = 0500`. O ERP reportou
+  CSOSN inválida. Normalizar para o código de três dígitos homologado e validar
+  uma amostra antes da carga integral.
+- Rubinettos: 8.245 linhas; o arquivo recebido também usa `CSOSN = 0500` e foi
+  rejeitado. O leitor atual produz `500`, mas uma nova saída deve reconciliar
+  os demais campos preenchidos pelo contador e passar por QA antes do envio.
+- Atlas: a saída considerada definitiva usa `ALIQUOTA COFINS CST = 0` em todos
+  os 203 itens, coerente com a rejeição de CST COFINS inválida informada pela
+  Ana. Corrigir somente com o código confirmado pelo contador.
+- Studio Morandin: há retorno revisado com 91 itens e fiscal preenchido, mas
+  ele ainda usa `CSOSN = 0500`, possui pesos zerados e conserva o texto `NOVO`
+  em `OBSERVACAO` em 16 linhas. Deve ser normalizado e regenerado; o arquivo de `Saida/`
+  continua identificado como provisório.
+- Invita: existe arquivo `OK_CONTADOR` com 48 itens, porém as capturas do
+  contador exibidas neste WhatsApp tratam de Adama, não de Invita. A mesma
+  planilha Invita, com o mesmo hash, foi colocada na pasta de entrega com o
+  nome `CONFIRMAR_COM_FORNECEDOR...`; por isso, não considerar a palavra `OK`
+  isoladamente como liberação de todos os itens.
+- Adama: o processamento de preços e a sincronização de 889 itens estão feitos,
+  mas as capturas de 01/09 mantêm ressalvas tributárias para NCMs específicos.
+  Qualquer nova importação completa depende da decisão cliente/fornecedor;
+  correção de preço continua sendo apenas pelo layout resumido.
+
+### 12.4 Avaliação do rumo e ordem recomendada
+
+O projeto está no rumo certo quanto à separação por fornecedor, uso de
+`decimal`, auditorias, backups e distinção entre inclusão e atualização. Não
+está seguro, porém, enviar o lote pendente no estado atual. A compilação passa,
+mas não existem testes automatizados que cubram desconto persistido no ERP,
+peso por caixa, formatos de CSOSN/CST ou cobertura das tabelas solicitadas.
+
+Ordem de trabalho recomendada:
+
+1. obter de Mônica a regra operacional para limpar/preservar `DESCONTO %` e
+   confirmar se `PESOBRUTO` significa peso da caixa;
+2. obter o XLSX Nina `07/26` e as fontes das seis faixas Del de vinílico;
+3. corrigir desconto e peso em uma amostra pequena, usando `920008`, `920027`
+   e uma referência de 63 kg como casos de aceite no ERP;
+4. gerar a Villa Art revenda inteira no layout completo, somente depois das
+   duas confirmações anteriores;
+5. normalizar e testar Kromma, Rubinettos, Atlas e Studio, uma planilha por vez;
+6. fechar com contador/fornecedor Nina, rodapé, Invita e os NCMs ressalvados de
+   Adama;
+7. somente após cada aceite, sincronizar a respectiva origem no SQLite e marcar
+   a planilha como definitiva.
+
+Regra de comunicação: cada arquivo enviado ao cliente deve ser acompanhado de
+fornecedor, finalidade (`IMPORTACAO` ou `ATUALIZACAO`), quantidade de itens,
+fonte usada, pendências remanescentes e resultado da tentativa no ERP. Isso
+evita repetir a ambiguidade entre “devolvido pelo contador”, “aprovado” e
+“rejeitado na importação”.
+
+### 12.5 Escopo confirmado pelo responsável em 01/09/2026
+
+Fernando Costa confirmou que os fluxos abaixo estão concluídos e devem ser
+tratados como `OK`, sem reabrir correções nesta etapa:
+
+- VillaCol revenda;
+- Villagres revenda;
+- Strufaldi / SL Especial;
+- Drop;
+- Roca;
+- Imersi;
+- VillaCol Del Credere `DEL5`, `DEL10`, `DEL20`, `DEL25` e `DEL30`;
+- Villa Art Del Credere em todas as faixas.
+
+Escopo restante, a ser resolvido separadamente e nesta ordem:
+
+1. Villa Art revenda, em layout completo de importação;
+2. rodapé Villagres, cujo arquivo pode ter passado despercebido.
+
+A faixa VillaCol `DEL15` não foi mencionada na confirmação. Mantê-la como
+`CONFIRMAR`, sem classificá-la como erro nem refazê-la, até confirmação
+expressa.
+
+### 12.6 Villa Art revenda concluída em 01/09/2026
+
+A Villa Art revenda foi tratada isoladamente, sem alterar os fluxos que o
+responsável confirmou como `OK`.
+
+Fonte:
+
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/VILLAGRES/002 TABELA VILLA ART SP 01.05.26 - ARC HOME.xlsx`.
+
+Saída completa para importação:
+
+- `Saida/IMPORTACAO_ERP_VILLA_ART_20260901_190836.xlsx`.
+
+Correções específicas deste fluxo:
+
+- todas as 25 referências da fonte foram mantidas no layout completo de 60
+  colunas;
+- preço de venda e preço de fábrica recebem o preço final já calculado;
+- `DESCONTO %` fica zerado, evitando a segunda aplicação do desconto pelo ERP;
+- `PESOBRUTO` usa `peso bruto/cx` da coluna 16, e não `peso bruto/m2`;
+- `OBSERVACAO` permanece vazia.
+
+QA:
+
+- 25 registros e 25 referências únicas;
+- 60 colunas;
+- marca `VILLA ART` em todos os itens;
+- nenhuma fórmula;
+- nenhum campo fiscal obrigatório ausente;
+- preços conferidos contra a fonte pela regra
+  `DESCONTO × (1 + 0,65% + 9,86%)`;
+- descontos iguais a zero em todas as linhas;
+- pesos de caixa encontrados: 30 kg, 47 kg, 48,93 kg e 63 kg;
+- arquivo XLSX íntegro;
+- SQLite não alterado.
+
+Relatório:
+
+- `Saida/RELATORIO_AUDITORIA_VILLA_ART_REVENDA_20260901_190836.json`.
+
+Com isso, a pendência Villa Art revenda está resolvida do lado do integrador e
+o arquivo está pronto para uma tentativa controlada no ERP. O único item do
+escopo restante passa a ser o rodapé Villagres.
+
+O rodapé foi localizado, mas não foi alterado nesta etapa:
+
+- `Saida/VINILICO_RODAPE_PROCESSADO_20260817_205546/IMPORTACAO_ERP_INCLUSAO_RODAPE_PENDENTE_UNIDADE_E_FISCAL.xlsx`;
+- `/home/fernando/Projetos/Work/ARCHOME/Planilhas/Moreira/NAO_SUBIR_IMPORTACAO_ERP_INCLUSAO_RODAPE_PENDENTE_UNIDADE_E_FISCAL - SEM NCM.xlsx`.
+
+## 13. Respostas Mônica — auditoria, correção e migração em 07/09/2026
+
+Fontes recebidas em `/home/fernando/Documentos/ArcHome/RespostasMonica`:
+
+- `IMPORTACAO_ERP_ADAMA_PROVISORIA_20260813_221132.xlsx`;
+- `IMPORTACAO_ERP_STUDIO_MORANDIN_PROVISORIA_20260813_214402.xlsx`;
+- `IMPORTACAO_ERP_NINA_MARTINELLI_IMPOSTOS_CONTADOR_20260831_201659.xlsx`;
+- `TABELA-PRECO-NINA-MARTINELLI_2026-Representação-REV04.xlsx`.
+
+As fontes foram preservadas. As saídas e relatórios desta etapa ficam em
+`Saida/RESPOSTAS_MONICA_20260907/`.
+
+### 13.1 Adama
+
+Mônica apontou que a linha 2, referência `OMC00002447`, NCM `32082020`, estava
+sem `ALIQICMSORIGEM` e `ALIQICMSINTERNA`. Foi aplicado `18` em ambos os campos,
+que é a alíquota interna paulista escolhida entre as duas alternativas que ela
+autorizou (`12` ou `18`). A escolha fica explícita para futura conferência
+fiscal.
+
+Saída: `IMPORTACAO_ERP_ADAMA_CORRIGIDA_MONICA_20260907.xlsx`.
+
+QA: 889 linhas, 60 colunas, XLSX íntegro, sem fórmulas; os dois ICMS da linha
+2 são `18`. A origem `ADAMA` foi substituída no SQLite com 889 registros.
+
+### 13.2 Studio Morandin
+
+A planilha fiscal estava completa. A única alteração foi normalizar o CSOSN de
+`0500` para o código textual de três dígitos `500` em todas as 91 linhas.
+
+Saída: `IMPORTACAO_ERP_STUDIO_MORANDIN_CORRIGIDA_MONICA_20260907.xlsx`.
+
+QA: 91 linhas, 60 colunas, XLSX íntegro, sem fórmulas, CSOSN `500` em todos os
+itens e coluna formatada como texto. A origem `STUDIO_MORANDIN` foi inserida no
+SQLite com 91 registros.
+
+### 13.3 Nina Martinelli — REV04
+
+A REV04 foi lida diretamente da aba `Coleção Completa`; o leitor .NET também
+aceita a aba histórica `COLECAO_COMPLETA`. A atualização preserva a cobertura
+da fonte: 1.141 linhas, incluindo quatro produtos cuja origem informa
+`depende do raio`, que permanecem com `CODIGOFABRICA` vazio e não são tratados
+como duplicidade.
+
+Correções confirmadas por Mônica e aplicadas a todos os itens:
+
+- IPI `0,65`; ICMS origem `12`; ICMS interno `12`; IVA `81`;
+- embalagem de venda `1`;
+- CST textual `000`;
+- CST de COFINS, IPI e PIS textual `99`;
+- CSOSN textual `500`; CFOP dentro `5405`; CFOP fora `6404`;
+- enquadramento IPI `999`; PIS origem `1,65`; COFINS origem `7,60`;
+- IBS `0,1`; CBS `0,9`; classificação tributária textual `000001`.
+
+O percentual ST permaneceu `0`, pois Mônica não pediu alteração dessa coluna e
+os retornos fiscais dela usam esse valor juntamente com CSOSN `500`.
+
+Saída: `Saida/IMPORTACAO_ERP_NINA_MARTINELLI_IMPOSTOS_CONTADOR_20260907_123026.xlsx`.
+
+QA: 1.141 linhas e 60 colunas; nenhuma fórmula; 0 divergências de preço e de
+código em relação à REV04; referências preenchidas únicas; nenhum campo fiscal
+obrigatório vazio; códigos fiscais/NCM formatados como texto. A origem
+`NINA_MARTINELLI` foi inserida no SQLite com 1.141 registros, preservando
+embalagem de venda `1` também para itens M2.
+
+### 13.4 Migração SQLite e rastreabilidade
+
+Backup realizado antes da carga:
+
+- `Saida/RESPOSTAS_MONICA_20260907/R3IntegradorDb_ANTES_MIGRACAO_MONICA_20260907.db.bak`.
+
+As cargas foram feitas por origem, cada uma em transação SQLite:
+
+| Origem | Registros |
+|---|---:|
+| `ADAMA` | 889 |
+| `STUDIO_MORANDIN` | 91 |
+| `NINA_MARTINELLI` | 1.141 |
+
+Verificação posterior ao banco:
+
+- Adama `OMC00002447`: ICMS origem/interno `18/18`;
+- Studio: CSOSN `500` nos 91 itens;
+- Nina: os valores fiscais acima são uniformes nos 1.141 itens.
+
+Relatórios:
+
+- `Saida/RESPOSTAS_MONICA_20260907/RELATORIO_AUDITORIA_ADAMA_STUDIO_MONICA_20260907.json`;
+- `Saida/RESPOSTAS_MONICA_20260907/RELATORIO_AUDITORIA_COMPLETO_MONICA_20260907.json`.

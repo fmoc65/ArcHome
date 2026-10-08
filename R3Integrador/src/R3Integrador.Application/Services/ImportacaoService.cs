@@ -506,7 +506,7 @@ public class ImportacaoService
         var arquivoSaida = CriarCaminhoSaida($"IMPORTACAO_ERP_NINA_MARTINELLI_IMPOSTOS_CONTADOR_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
         RegistrarExportacao(tabela, produtosErp.Count, arquivoSaida);
         await _excelExporter.ExportarAsync(produtosErp, arquivoSaida);
-        _logger.LogWarning("Arquivo Nina Martinelli gerado com os impostos informados pelo contador; NCM, CST, CFOP e demais campos sem orientacao continuam pendentes.");
+        _logger.LogInformation("Arquivo Nina Martinelli gerado com os preços REV04 e o fiscal confirmado pela Mônica.");
     }
 
     public async Task ProcessarSpecialSlAsync(string caminhoArquivo)

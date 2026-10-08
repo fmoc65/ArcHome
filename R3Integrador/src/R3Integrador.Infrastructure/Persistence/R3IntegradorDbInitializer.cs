@@ -183,6 +183,13 @@ public sealed class R3IntegradorDbInitializer
         SqliteTransaction transaction,
         string tabelaOrigem)
     {
+        // A orientação fiscal/comercial da Mônica para Nina Martinelli é
+        // explícita: todas as embalagens de venda devem permanecer em 1.
+        if (tabelaOrigem.Equals("NINA_MARTINELLI", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """

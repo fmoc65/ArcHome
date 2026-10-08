@@ -6,6 +6,9 @@ namespace R3Integrador.Infrastructure.Export;
 
 public class ExcelExportService : IExcelExporter
 {
+    private static readonly int[] ColunasCodigoTexto =
+    [2, 3, 13, 26, 27, 28, 29, 30, 31, 32, 51, 59, 60];
+
     public async Task ExportarAsync(List<ProdutoErpDto> produtos, string caminhoSaida)
     {
         // Força a criação das pastas caso o Windows bloqueie o caminho
@@ -65,7 +68,9 @@ public class ExcelExportService : IExcelExporter
             worksheet.Cell(linha, 38).Value = produto.AliquotaPis;
             worksheet.Cell(linha, 39).Value = produto.PercentualSt;
             worksheet.Cell(linha, 40).Value = produto.UnidFabril;
-            worksheet.Cell(linha, 41).Value = produto.Observacao;
+            // A coluna existe no layout do ERP, mas deve permanecer vazia em
+            // todas as tabelas geradas pelo integrador.
+            worksheet.Cell(linha, 41).Value = string.Empty;
             worksheet.Cell(linha, 42).Value = produto.DiferencaIcms;
             worksheet.Cell(linha, 43).Value = produto.ReducaoBaseIcms;
             worksheet.Cell(linha, 44).Value = produto.ReducaoBaseSt;
@@ -85,6 +90,13 @@ public class ExcelExportService : IExcelExporter
             worksheet.Cell(linha, 58).Value = produto.AliquotaCbs;
             worksheet.Cell(linha, 59).Value = produto.ClassificacaoTributaria;
             worksheet.Cell(linha, 60).Value = produto.CodigoBeneficio;
+
+            // Códigos fiscais, NCM e referências não podem sofrer conversão
+            // numérica do Excel (especialmente CST 000 e CSOSN 500).
+            foreach (var coluna in ColunasCodigoTexto)
+            {
+                worksheet.Cell(linha, coluna).Style.NumberFormat.Format = "@";
+            }
 
             AplicarSituacaoCamposFiscais(worksheet, linha, produto.SituacaoCamposFiscais);
 

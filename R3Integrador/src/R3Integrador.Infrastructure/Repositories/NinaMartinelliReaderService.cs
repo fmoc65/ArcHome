@@ -9,8 +9,10 @@ namespace R3Integrador.Infrastructure.Repositories;
 public sealed class NinaMartinelliReaderService : INinaMartinelliReader
 {
     private const string NomeAba = "COLECAO_COMPLETA";
+    private const string NomeAbaRev04 = "Coleção Completa";
     private const string NomeAbaImportacaoErp = "IMPORTACAO_ERP";
     private const string Marca = "NINA MARTINELLI";
+    private static readonly string[] PrefixosProdutosCimenticios = ["154", "158", "159"];
 
     private readonly ICsosnService _csosnService;
     private readonly NinaFiscalParameters _fiscalParameters;
@@ -31,14 +33,17 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
             return Task.FromResult(LerImportacaoErp(worksheetImportacaoErp));
         }
 
-        if (!workbook.TryGetWorksheet(NomeAba, out var worksheet))
+        if (!workbook.TryGetWorksheet(NomeAba, out var worksheet) &&
+            !workbook.TryGetWorksheet(NomeAbaRev04, out worksheet))
         {
-            throw new InvalidOperationException($"Aba '{NomeAba}' nao encontrada na tabela Nina Martinelli.");
+            throw new InvalidOperationException(
+                $"Aba '{NomeAba}' ou '{NomeAbaRev04}' nao encontrada na tabela Nina Martinelli.");
         }
 
         var produtos = new List<ProdutoErpDto>();
         var referenciasUsadas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var referenciasTecnicasCriadas = 0;
+        var codigosFabricaAusentes = 0;
         var ultimaLinha = worksheet.LastRowUsed()?.RowNumber() ?? 0;
 
         for (var row = 2; row <= ultimaLinha; row++)
@@ -60,10 +65,16 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
             var tributacaoSt = LerTributacaoSt(worksheet, row);
 
             var codigo = codigoOrigem;
-            if (codigoOrigem.Equals("depende do raio", StringComparison.OrdinalIgnoreCase) || !referenciasUsadas.Add(codigo))
+            if (codigoOrigem.Equals("depende do raio", StringComparison.OrdinalIgnoreCase))
             {
-                // "depende do raio" e uma descricao de referencia, nao uma chave ERP.
-                // A chave derivada e deterministica e distingue cada borda pelo catalogo.
+                // A origem informa uma condicao comercial, nao um codigo de fabrica.
+                // Mantem vazio para nao transformar a descricao em uma chave ficticia.
+                codigo = string.Empty;
+                codigosFabricaAusentes++;
+            }
+            else if (!referenciasUsadas.Add(codigo))
+            {
+                // Duplicidades de codigos reais ainda recebem uma chave deterministica.
                 codigo = CriarReferenciaTecnica(nome, cor, dimensao, row);
                 referenciasUsadas.Add(codigo);
                 referenciasTecnicasCriadas++;
@@ -80,21 +91,25 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
                 Linha = aplicacao,
                 Modelo = dimensao,
                 Cor = cor,
+                Ncm = DeterminarNcm(codigoOrigem, aplicacao, nome),
                 UfOrigem = _fiscalParameters.UfFabrica,
                 // O preco de representacao e preservado provisoriamente nas duas colunas;
                 // frete, margem e tributacao ainda nao foram homologados.
                 PrecoVenda = preco,
                 PrecoFabrica = preco,
                 Unidade = unidade,
-                QtdeEmbalagemVenda = CalcularEmbalagemVenda(unidade, embalagem),
+                // Orientação da Mônica: sem confirmação comercial da embalagem,
+                // manter uma unidade de venda para todos os itens.
+                QtdeEmbalagemVenda = 1,
                 PesoBruto = LerDecimal(worksheet.Cell(row, 14)),
                 QtdeEmbalagemCompra = 1,
                 UnidFabril = unidade,
                 EstoqueMinimo = 0,
                 EstoqueMaximo = 0,
-                Observacao = CriarObservacao(worksheet, row, codigoOrigem, codigo, embalagem),
+                Observacao = string.Empty,
                 SituacaoCamposFiscais = CriarSituacaoCamposFiscais()
             };
+            produto.SituacaoCamposFiscais[13] = SituacaoCampoFiscal.Confirmado;
             AplicarTributacao(produto, tributacaoSt);
             produtos.Add(produto);
         }
@@ -102,8 +117,9 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
         Console.WriteLine();
         Console.WriteLine($"[OK] {produtos.Count} produtos Nina Martinelli processados.");
         Console.WriteLine($"[INFO] {referenciasTecnicasCriadas} referencia(s) tecnica(s) criada(s) para codigos repetidos.");
-        Console.WriteLine("[INFO] CSOSN e ST determinados automaticamente por linha; ausencia de indicacao de ST resulta em CSOSN 102 e ST zero.");
-        Console.WriteLine("[ATENCAO] NCM, CST, CFOP e demais campos sem premissa informada continuam pendentes.");
+        Console.WriteLine($"[INFO] {codigosFabricaAusentes} produto(s) sem codigo de fabrica na origem; campo mantido vazio.");
+        Console.WriteLine("[INFO] Fiscal aplicado conforme orientação da Mônica: CSOSN 500, CST 000 e CFOP 5405/6404.");
+        Console.WriteLine("[INFO] NCM aplicado por familia: ceramicos 69072300, cimenticios 68101900 e impermeabilizantes 38099390.");
         return Task.FromResult(produtos);
     }
 
@@ -114,7 +130,8 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
 
         for (var row = 2; row <= ultimaLinha; row++)
         {
-            if (string.IsNullOrWhiteSpace(worksheet.Cell(row, 2).GetFormattedString()))
+            if (string.IsNullOrWhiteSpace(worksheet.Cell(row, 2).GetFormattedString())
+                && string.IsNullOrWhiteSpace(worksheet.Cell(row, 5).GetFormattedString()))
             {
                 continue;
             }
@@ -142,6 +159,9 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
                 ClassificacaoTributaria = Texto(worksheet, row, 59), CodigoBeneficio = Texto(worksheet, row, 60),
                 SituacaoCamposFiscais = CriarSituacaoCamposFiscais()
             };
+            produto.Ncm = DeterminarNcm(produto.CodigoFabrica, produto.Linha, produto.DescricaoComercial);
+            produto.Observacao = string.Empty;
+            produto.SituacaoCamposFiscais[13] = SituacaoCampoFiscal.Confirmado;
             AplicarTributacao(
                 produto,
                 new TributacaoStLinha(
@@ -159,23 +179,31 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
 
     private void AplicarTributacao(ProdutoErpDto produto, TributacaoStLinha tributacaoSt)
     {
-        var resultadoCsosn = _csosnService.Determinar(new CsosnCenario(
-            tributacaoSt.PercentualInformado,
-            tributacaoSt.SemIncidencia,
-            tributacaoSt.IcmsStCobradoAnteriormente,
-            OperacaoNaoTributada: tributacaoSt.OperacaoNaoTributada));
-
         produto.UfOrigem = _fiscalParameters.UfFabrica;
         produto.IpiPercentual = _fiscalParameters.Ipi;
         produto.AliqIcmsOrigem = _fiscalParameters.AliquotaIcmsOrigem;
         produto.AliqIcmsInterna = _fiscalParameters.AliquotaIcmsSaida;
         produto.Iva = _fiscalParameters.Mva;
-        produto.PercentualSt = resultadoCsosn.PercentualSt;
-        produto.Csosn = resultadoCsosn.Codigo;
+        produto.PercentualSt = _fiscalParameters.PercentualSt;
+        produto.Cst = _fiscalParameters.Cst;
+        produto.AliquotaCofinsCst = _fiscalParameters.AliquotaCofinsCst;
+        produto.AliquotaIpiCst = _fiscalParameters.AliquotaIpiCst;
+        produto.AliquotaPisCst = _fiscalParameters.AliquotaPisCst;
+        produto.Csosn = _fiscalParameters.Csosn;
+        produto.CfopDentro = _fiscalParameters.CfopDentro;
+        produto.CfopFora = _fiscalParameters.CfopFora;
+        produto.EnquadramentoIpi = _fiscalParameters.EnquadramentoIpi;
         produto.AliquotaPisOrigem = _fiscalParameters.PisOrigemTexto;
         produto.AliquotaCofinsOrigem = _fiscalParameters.CofinsOrigemTexto;
+        produto.AliquotaIbs = _fiscalParameters.AliquotaIbs;
+        produto.AliquotaCbs = _fiscalParameters.AliquotaCbs;
+        produto.ClassificacaoTributaria = _fiscalParameters.ClassificacaoTributaria;
 
-        foreach (var coluna in new[] { 14, 18, 19, 20, 21, 30, 39, 52, 53 })
+        foreach (var coluna in new[]
+                 {
+                     14, 18, 19, 20, 21, 26, 27, 28, 29, 30, 31, 32, 39,
+                     51, 52, 53, 57, 58, 59
+                 })
         {
             produto.SituacaoCamposFiscais[coluna] = SituacaoCampoFiscal.Confirmado;
         }
@@ -252,19 +280,36 @@ public sealed class NinaMartinelliReaderService : INinaMartinelliReader
         [60] = SituacaoCampoFiscal.Pendente
     };
 
-    private static string CriarObservacao(IXLWorksheet worksheet, int row, string codigoOrigem, string codigo, decimal embalagem)
+    private string DeterminarNcm(string codigoFabrica, string aplicacao, string nome)
     {
-        var pecasM2 = worksheet.Cell(row, 9).GetFormattedString().Trim();
-        var pecasCaixa = worksheet.Cell(row, 10).GetFormattedString().Trim();
-        var unidadeEmbalagem = NormalizarTexto(worksheet.Cell(row, 12).GetString());
-        var acabamento = NormalizarTexto(worksheet.Cell(row, 21).GetString());
-        var adicional = NormalizarTexto(worksheet.Cell(row, 22).GetString());
-        var codigoTecnico = codigo == codigoOrigem ? string.Empty : $" - codigo origem: {codigoOrigem}";
-        return $"Nina Martinelli representacao REV02 - embalagem: {embalagem:0.####} {unidadeEmbalagem} - {pecasM2} - {pecasCaixa} - acabamento: {acabamento} - {adicional}{codigoTecnico} - NCM, fiscal e regra comercial pendentes de homologacao";
-    }
+        var codigoNormalizado = NormalizarTexto(codigoFabrica);
+        var aplicacaoNormalizada = NormalizarTexto(aplicacao);
+        var nomeNormalizado = NormalizarTexto(nome);
 
-    private static decimal CalcularEmbalagemVenda(string unidade, decimal embalagem) =>
-        unidade == "M2" ? 0 : 1;
+        // Os produtos de tratamento/impermeabilizacao pertencem a familia 157
+        // e prevalecem sobre a empresa emissora, conforme orientacao fiscal.
+        if (codigoNormalizado.StartsWith("157", StringComparison.Ordinal)
+            || aplicacaoNormalizada.Contains("QUIMICO", StringComparison.Ordinal))
+        {
+            return _fiscalParameters.NcmImpermeabilizantes;
+        }
+
+        // Na tabela do fornecedor, 154, 158 e 159 identificam as linhas da
+        // Nina Martinelli Revestimentos (cimenticios). As referencias textuais
+        // "depende do raio" sao bordas Verano inseridas na mesma familia 154.
+        if (PrefixosProdutosCimenticios.Any(prefixo =>
+                codigoNormalizado.StartsWith(prefixo, StringComparison.Ordinal))
+            || codigoNormalizado.Equals("DEPENDE DO RAIO", StringComparison.Ordinal)
+            || ((string.IsNullOrEmpty(codigoNormalizado)
+                    || codigoNormalizado.StartsWith("BORDA-", StringComparison.Ordinal))
+                && nomeNormalizado.Contains("BORDA", StringComparison.Ordinal)
+                && nomeNormalizado.Contains("VERANO", StringComparison.Ordinal)))
+        {
+            return _fiscalParameters.NcmProdutosCimenticios;
+        }
+
+        return _fiscalParameters.NcmProdutosCeramicos;
+    }
 
     private static string CriarReferenciaTecnica(string nome, string cor, string dimensao, int row)
     {

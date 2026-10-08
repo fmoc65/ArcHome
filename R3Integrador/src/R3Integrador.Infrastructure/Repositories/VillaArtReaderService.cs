@@ -60,8 +60,12 @@ public class VillaArtReaderService : IVillaArtReader
                 VariacaoTonalidade = estado.VariacaoTonalidade,
                 M2Caixa = estado.M2Caixa,
                 Espessura = estado.Espessura,
-                PesoBrutoM2 = estado.PesoBrutoM2,
-                PrecoDesconto = precoDesconto,
+                // O layout do ERP espera o peso bruto da embalagem de compra
+                // (caixa), e nao o peso por metro quadrado da coluna anterior.
+                PesoBrutoM2 = estado.PesoBrutoCaixa,
+                // O preco final ja incorpora IPI e ST. Igualar a base de
+                // desconto impede o ERP de aplicar um segundo desconto.
+                PrecoDesconto = precoFinal,
                 PrecoTabela = precoFinal,
                 PrecoVenda = precoFinal
             });
@@ -136,7 +140,7 @@ public class VillaArtReaderService : IVillaArtReader
         public string VariacaoTonalidade { get; private set; } = string.Empty;
         public decimal M2Caixa { get; private set; }
         public decimal Espessura { get; private set; }
-        public decimal PesoBrutoM2 { get; private set; }
+        public decimal PesoBrutoCaixa { get; private set; }
 
         public void Atualizar(IXLWorksheet worksheet, int row)
         {
@@ -165,10 +169,10 @@ public class VillaArtReaderService : IVillaArtReader
                 Espessura = ParseDecimal(espessura);
             }
 
-            var pesoBruto = worksheet.Cell(row, 15).GetString();
+            var pesoBruto = worksheet.Cell(row, 16).GetString();
             if (!string.IsNullOrWhiteSpace(pesoBruto))
             {
-                PesoBrutoM2 = ParseDecimal(pesoBruto);
+                PesoBrutoCaixa = ParseDecimal(pesoBruto);
             }
         }
 
